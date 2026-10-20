@@ -1,0 +1,162 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión de Frutales - Granja Verdio</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f0f4f1; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+    .nav { width: 100%; max-width: 650px; display: flex; justify-content: space-between; margin-bottom: 16px; }
+    .nav a { text-decoration: none; font-weight: bold; font-size: 0.95rem; color: #2e7d32; padding: 8px 14px; border-radius: 6px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+    .nav a:hover { background: #e8f5e9; }
+    .card { background: white; max-width: 650px; width: 100%; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); padding: 28px; }
+    h2 { color: #235334; margin-top: 0; font-size: 1.5rem; text-align: center; }
+    p.sub { color: #666; font-size: 0.9rem; text-align: center; margin-bottom: 24px; }
+    .row { display: flex; gap: 15px; margin-bottom: 16px; flex-wrap: wrap; }
+    .col { flex: 1; min-width: 250px; }
+    .field { margin-bottom: 16px; width: 100%; }
+    label { display: block; font-weight: 600; color: #333; margin-bottom: 6px; font-size: 0.9rem; }
+    input[type="text"], input[type="date"], input[type="number"], select, textarea {
+      width: 100%; padding: 10px 12px; border: 1px solid #ccd5ce; border-radius: 8px; font-size: 0.95rem; outline: none; transition: border-color 0.2s;
+    }
+    input:focus, select:focus, textarea:focus { border-color: #2e7d32; }
+    .btn-gps { background: #e8f5e9; color: #2e7d32; border: 1px solid #81c784; padding: 7px 12px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; margin-top: 6px; font-weight: 600; }
+    .btn-submit { width: 100%; background: #2e7d32; color: white; padding: 13px; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    .btn-submit:hover { background: #1b5e20; }
+    #alerta { display: none; padding: 14px; border-radius: 8px; margin-top: 18px; font-size: 0.95rem; text-align: center; }
+    .success { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .error { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .section-title { font-size: 1.05rem; color: #1b5e20; border-bottom: 2px solid #e8f5e9; padding-bottom: 5px; margin-bottom: 15px; margin-top: 25px; }
+  </style>
+</head>
+<body>
+
+<div class="nav">
+  <a href="/">📝 Nuevo Registro</a>
+  <a href="/registros">📊 Ver Catálogo y Descargas</a>
+</div>
+
+<div class="card">
+  <h2>🌱 Ficha Agronómica Integral</h2>
+  <p class="sub">Registro de campo y sincronización con Google Drive</p>
+
+  <form id="frutalForm">
+    <div class="section-title">1. Identificación y Establecimiento</div>
+    <div class="row">
+      <div class="col">
+        <label>Especie / Variedad *</label>
+        <input type="text" name="especie_variedad" placeholder="Ej: Limón Pérsico, Mango..." required>
+      </div>
+      <div class="col">
+        <label>Lote o Sector *</label>
+        <input type="text" name="lote_sector" placeholder="Ej: Sector Norte" required>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <label>Fecha de Siembra</label>
+        <input type="date" name="fecha_siembra">
+      </div>
+      <div class="col">
+        <label>Edad (Meses)</label>
+        <input type="number" name="edad_meses" placeholder="Ej: 24">
+      </div>
+    </div>
+
+    <div class="section-title">2. Estado Actual y Riego</div>
+    <div class="row">
+      <div class="col">
+        <label>Etapa Fenológica</label>
+        <select name="etapa_fenologica">
+          <option value="Brotación vegetativa">Brotación vegetativa</option>
+          <option value="Floración">Floración</option>
+          <option value="Cuajado de fruto">Cuajado de fruto</option>
+          <option value="Desarrollo de fruto">Desarrollo de fruto</option>
+          <option value="Maduración / Cosecha">Maduración / Cosecha</option>
+          <option value="Poda / Reposo">Poda / Reposo</option>
+        </select>
+      </div>
+      <div class="col">
+        <label>Sistema de Riego</label>
+        <select name="tipo_riego">
+          <option value="Sin asignar">Seleccionar...</option>
+          <option value="Goteo">Goteo</option>
+          <option value="Microaspersión">Microaspersión</option>
+          <option value="Gravedad / Inundación">Gravedad / Inundación</option>
+          <option value="Secano (Solo lluvia)">Secano (Solo lluvia)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="section-title">3. Sanidad y Manejo</div>
+    <div class="field">
+      <label>Condición Fitosanitaria</label>
+      <select name="estado_fitosanitario">
+        <option value="Óptimo / Sano">Óptimo / Sano</option>
+        <option value="Presencia leve de plaga">Presencia leve de plaga</option>
+        <option value="Ataque severo">Ataque severo (requiere manejo)</option>
+        <option value="Deficiencia nutricional">Deficiencia nutricional</option>
+        <option value="Estrés hídrico">Estrés hídrico</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Control de Plagas y Enfermedades</label>
+      <textarea name="control_plagas" rows="2" placeholder="Ej: Aplicación de caldo sulfocálcico, aceite de neem..."></textarea>
+    </div>
+    <div class="field">
+      <label>Manejo Cultural y Nutricional</label>
+      <textarea name="manejo_general" rows="2" placeholder="Ej: Podas de formación/sanidad, incorporación de bocashi..."></textarea>
+    </div>
+
+    <div class="section-title">4. Geometría y Evidencia</div>
+    <div class="field">
+      <label>Coordenadas GPS (Latitud, Longitud)</label>
+      <input type="text" id="coordenadas" name="coordenadas" placeholder="Ej: 13.9782, -89.2154">
+      <button type="button" class="btn-gps" onclick="obtenerUbicacion()">📍 Capturar coordenadas actuales</button>
+    </div>
+    <div class="field">
+      <label>Fotografía de campo *</label>
+      <input type="file" name="archivo" accept="image/*" capture="environment" required>
+    </div>
+
+    <button type="submit" class="btn-submit" id="btnGuardar">Guardar y Subir a Drive</button>
+  </form>
+
+  <div id="alerta"></div>
+</div>
+
+<script>
+  function obtenerUbicacion() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => document.getElementById('coordenadas').value = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`,
+        () => alert('No se pudo acceder al GPS.')
+      );
+    }
+  }
+
+  document.getElementById('frutalForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnGuardar');
+    const alerta = document.getElementById('alerta');
+    btn.disabled = true; btn.innerText = 'Guardando expediente...'; alerta.style.display = 'none';
+
+    try {
+      const resp = await fetch('/api/registro-frutal/', { method: 'POST', body: new FormData(e.target) });
+      const data = await resp.json();
+      if (resp.ok) {
+        alerta.className = 'success';
+        alerta.innerHTML = `✅ <b>Expediente guardado</b><br><a href="${data.drive_url}" target="_blank" style="color: #1b5e20;">Ver foto en Drive</a>`;
+        alerta.style.display = 'block'; e.target.reset();
+      } else throw new Error(data.detail);
+    } catch (err) {
+      alerta.className = 'error'; alerta.innerText = `❌ Error: ${err.message}`; alerta.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.innerText = 'Guardar y Subir a Drive';
+    }
+  });
+</script>
+
+</body>
+</html>

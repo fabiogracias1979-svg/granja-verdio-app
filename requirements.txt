@@ -1,0 +1,10 @@
+﻿fastapi
+uvicorn
+sqlalchemy
+jinja2
+pandas
+openpyxl
+python-multipart
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib

@@ -1,0 +1,15 @@
+﻿venv/
+__pycache__/
+*.db
+credentials.json
+token.json
+client_secret*.json
+*.json
+*.gdb/
+*.aprx
+*.aprx.xml
+*.sde
+*.atx
+ImportLog/
+Index/
+mi_app/

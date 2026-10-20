@@ -1,0 +1,127 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Catálogo de Monitoreo - Granja Verdio</title>
+  <style>
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: #f0f4f1; margin: 0; padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+    h2 { color: #235334; margin: 0; }
+    .nav-btn {
+      text-decoration: none; font-weight: bold; font-size: 0.95rem; color: #2e7d32; padding: 9px 16px; border-radius: 8px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+    .actions-panel {
+      background: white; border-radius: 10px; padding: 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+    .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    select { padding: 8px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.9rem; }
+    .export-btns { display: flex; gap: 10px; }
+    .btn-exp {
+      background: #2e7d32; color: white; border: none; padding: 9px 15px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .btn-exp.geojson { background: #0277bd; }
+    .btn-exp:hover { opacity: 0.9; }
+    .table-container { background: white; border-radius: 10px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
+    th { background: #e8f5e9; color: #235334; padding: 12px 14px; font-weight: 600; border-bottom: 2px solid #c8e6c9; }
+    td { padding: 12px 14px; border-bottom: 1px solid #edf2ee; vertical-align: middle; }
+    tr:hover { background: #fafdfa; }
+    .badge {
+      display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;
+    }
+    .badge-sano { background: #e8f5e9; color: #1b5e20; }
+    .badge-alerta { background: #fff3e0; color: #e65100; }
+    .badge-peligro { background: #ffebee; color: #c62828; }
+    .link-drive { color: #1565c0; text-decoration: none; font-weight: 600; }
+    .link-drive:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header-bar">
+    <h2>📊 Monitoreo y Catálogo de Frutales</h2>
+    <a href="/" class="nav-btn">➕ Nuevo Registro</a>
+  </div>
+
+  <div class="actions-panel">
+    <div class="filters">
+      <label><b>Condición:</b></label>
+      <select id="filtroCondicion" onchange="cargarDatos()">
+        <option value="Todos">Todos</option>
+        <option value="Óptimo / Sano">Óptimo / Sano</option>
+        <option value="Presencia leve de plaga">Presencia leve de plaga</option>
+        <option value="Ataque severo (manejo urgente)">Ataque severo</option>
+        <option value="Deficiencia nutricional">Deficiencia nutricional</option>
+        <option value="Estrés hídrico">Estrés hídrico</option>
+      </select>
+    </div>
+
+    <div class="export-btns">
+      <a href="/exportar/geojson" class="btn-exp geojson">🗺️ Descargar GeoJSON (QGIS/ArcGIS)</a>
+      <a href="/exportar/excel" class="btn-exp">📗 Descargar Excel</a>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Variedad</th>
+          <th>Sector</th>
+          <th>Fenología</th>
+          <th>Condición</th>
+          <th>Coordenadas</th>
+          <th>Fecha</th>
+          <th>Fotografía</th>
+        </tr>
+      </thead>
+      <tbody id="tablaCuerpo">
+        <tr><td colspan="8" style="text-align:center; padding: 25px; color: #777;">Cargando registros...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+  async function cargarDatos() {
+    const estado = document.getElementById('filtroCondicion').value;
+    const res = await fetch(`/api/registros?filtro_estado=${encodeURIComponent(estado)}`);
+    const items = await res.json();
+    const tbody = document.getElementById('tablaCuerpo');
+    tbody.innerHTML = '';
+
+    if (items.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 25px; color: #777;">No hay árboles registrados con ese criterio.</td></tr>';
+      return;
+    }
+
+    items.forEach(item => {
+      let badgeClass = 'badge-sano';
+      if (item.estado_fitosanitario.includes('severo')) badgeClass = 'badge-peligro';
+      else if (item.estado_fitosanitario.includes('leve') || item.estado_fitosanitario.includes('Deficiencia')) badgeClass = 'badge-alerta';
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><b>#${item.id}</b></td>
+        <td><b>${item.especie_variedad}</b></td>
+        <td>${item.lote_sector}</td>
+        <td>${item.etapa_fenologica}</td>
+        <td><span class="badge ${badgeClass}">${item.estado_fitosanitario}</span></td>
+        <td><code>${item.coordenadas || 'Sin GPS'}</code></td>
+        <td>${item.fecha}</td>
+        <td><a href="${item.imagen_drive_url}" target="_blank" class="link-drive">🔍 Ver en Drive</a></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  window.onload = cargarDatos;
+</script>
+
+</body>
+</html>
