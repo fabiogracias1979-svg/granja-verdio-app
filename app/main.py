@@ -30,7 +30,7 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
         context={"registros": registros}
     )
 
-# Ruta exacta que llama tu formulario HTML
+# Ruta exacta que llama el formulario HTML
 @app.post("/api/registro-frutal/")
 async def registrar_frutal(
     especie_variedad: str = Form(...),
@@ -46,19 +46,7 @@ async def registrar_frutal(
     archivo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
-    # Separar coordenadas latitud y longitud
-    latitud = None
-    longitud = None
-    if coordenadas and "," in coordenadas:
-        partes = coordenadas.split(",")
-        try:
-            latitud = float(partes[0].strip())
-            longitud = float(partes[1].strip())
-        except (ValueError, IndexError):
-            latitud = None
-            longitud = None
-
-    # Subir imagen a Google Drive
+    # Subir imagen a Google Drive con tolerancia a fallos
     drive_url = ""
     if archivo and archivo.filename:
         try:
@@ -67,7 +55,7 @@ async def registrar_frutal(
             print(f"Error al subir a Google Drive: {e}")
             drive_url = ""
 
-    # Crear y guardar en la base de datos Neon (PostgreSQL)
+    # Creación del registro sin campos inexistentes
     nuevo_registro = RegistroFrutal(
         especie_variedad=especie_variedad,
         lote_sector=lote_sector,
@@ -79,8 +67,6 @@ async def registrar_frutal(
         control_plagas=control_plagas,
         manejo_general=manejo_general,
         coordenadas=coordenadas,
-        latitud=latitud,
-        longitud=longitud,
         drive_url=drive_url
     )
     
@@ -102,35 +88,32 @@ def export_geojson(db: Session = Depends(get_db)):
     features = []
 
     for r in registros:
-        # Extrae latitud y longitud numéricas
-        lat = getattr(r, "latitud", None)
-        lon = getattr(r, "longitud", None)
+        coord_str = getattr(r, "coordenadas", "")
+        if not coord_str or "," not in coord_str:
+            continue
 
-        if lat is None or lon is None:
-            coord_str = getattr(r, "coordenadas", "")
-            if coord_str and "," in coord_str:
-                try:
-                    parts = coord_str.split(",")
-                    lat = float(parts[0].strip())
-                    lon = float(parts[1].strip())
-                except (ValueError, IndexError):
-                    continue
-            else:
-                continue
+        try:
+            partes = coord_str.split(",")
+            lat = float(partes[0].strip())
+            lon = float(partes[1].strip())
+        except (ValueError, IndexError):
+            continue
 
         feature = {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [float(lon), float(lat)]
+                "coordinates": [lon, lat]  # Estándar GeoJSON: [Longitud, Latitud]
             },
             "properties": {
                 "id": r.id,
                 "especie_variedad": getattr(r, "especie_variedad", "N/A"),
                 "lote_sector": getattr(r, "lote_sector", "N/A"),
+                "fecha_siembra": str(getattr(r, "fecha_siembra", "")),
+                "edad_meses": getattr(r, "edad_meses", None),
                 "etapa_fenologica": getattr(r, "etapa_fenologica", "N/A"),
-                "estado_fitosanitario": getattr(r, "estado_fitosanitario", "N/A"),
                 "tipo_riego": getattr(r, "tipo_riego", "N/A"),
+                "estado_fitosanitario": getattr(r, "estado_fitosanitario", "N/A"),
                 "control_plagas": getattr(r, "control_plagas", ""),
                 "manejo_general": getattr(r, "manejo_general", ""),
                 "drive_url": getattr(r, "drive_url", "")
