@@ -3,14 +3,16 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Lee la URL de Neon en Render o usa SQLite en local si no existe la variable
+# Lee la URL de Neon o usa SQLite en local si no existe
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./granja.db")
 
-# Ajuste necesario para SQLAlchemy si la URL comienza con postgres://
+# Asegura el uso explícito del driver psycopg2
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
+elif SQLALCHEMY_DATABASE_URL.startswith("postgresql://"):
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
 
-# SQLite requiere check_same_thread; PostgreSQL no
+# SQLite requiere connect_args; PostgreSQL no
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
