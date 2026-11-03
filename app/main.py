@@ -248,3 +248,29 @@ def registrar_bitacora(
     db.commit()
 
     return {"status": "success", "mensaje": "Manejo registrado correctamente en la bitácora."}
+
+
+
+# Vista web: Tablero de Control de la Casa Malla
+@app.get("/tablero-casa-malla", response_class=HTMLResponse)
+def ver_tablero_casa_malla(request: Request, db: Session = Depends(get_db)):
+    siembras = db.query(RegistroCasaMalla).order_by(RegistroCasaMalla.id.desc()).all()
+    
+    # Preparamos los datos combinando la siembra con el nombre del cultivo
+    datos_tablero = []
+    for s in siembras:
+        cultivo = db.query(CatalogoCultivo).filter(CatalogoCultivo.id == s.cultivo_id).first()
+        datos_tablero.append({
+            "id": s.id,
+            "cama": s.identificador_cama,
+            "cultivo": cultivo.especie_variedad if cultivo else "Desconocido",
+            "estado": s.estado,
+            "trasplante": s.fecha_trasplante_estimada.strftime("%d/%m/%Y") if s.fecha_trasplante_estimada else "N/A",
+            "cosecha": s.fecha_cosecha_estimada.strftime("%d/%m/%Y") if s.fecha_cosecha_estimada else "N/A"
+        })
+
+    return templates.TemplateResponse(
+        request=request, 
+        name="tablero_casa_malla.html", 
+        context={"siembras": datos_tablero}
+    )

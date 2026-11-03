@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablero Casa Malla - Granja Verdio</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; max-width: 900px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2, h3 { color: #2e7d32; text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #ddd; padding: 10px; text-align: left; }
+        th { background-color: #2e7d32; color: white; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        .mensaje { display: none; background-color: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px; margin-top: 15px; text-align: center; border: 1px solid #c8e6c9; }
+    </style>
+</head>
+<body>
+    <h2>📊 Tablero de Control - Casa Malla</h2>
+    
+    <!-- Sección de Visualización -->
+    <div class="card" style="overflow-x: auto;">
+        <h3>Bancales Activos</h3>
+        <table>
+            <tr>
+                <th>ID Lote</th>
+                <th>Cama</th>
+                <th>Cultivo</th>
+                <th>Estado</th>
+                <th>Alerta Trasplante</th>
+                <th>Alerta Cosecha</th>
+            </tr>
+            {% for s in siembras %}
+            <tr>
+                <td><strong>{{ s.id }}</strong></td>
+                <td>{{ s.cama }}</td>
+                <td>{{ s.cultivo }}</td>
+                <td>{{ s.estado }}</td>
+                <td>{{ s.trasplante }}</td>
+                <td>{{ s.cosecha }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6" style="text-align: center;">No hay siembras registradas aún.</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+
+    <!-- Sección de Registro de Manejo -->
+    <div class="card">
+        <h3>🌱 Registrar Insumo o Labor</h3>
+        <p style="font-size: 14px; color: #555; text-align: center;">Usa el <strong>ID Lote</strong> de la tabla de arriba para vincular el manejo al bancal correcto.</p>
+        <form id="formBitacora">
+            <label>ID Lote (del bancal activo):</label>
+            <input type="number" name="casa_malla_id" placeholder="Ej. 1" required>
+            
+            <label>Fecha de Aplicación:</label>
+            <input type="date" name="fecha_aplicacion" required>
+            
+            <label>Labor o Insumo:</label>
+            <select name="tipo_insumo_labor" required>
+                <option value="" disabled selected>Selecciona una opción...</option>
+                <option value="Abono - Bocashi">Abono - Bocashi</option>
+                <option value="Abono - Compost">Abono - Compost</option>
+                <option value="Foliar - Biol">Foliar - Biol</option>
+                <option value="Preventivo - Caldo Sulfocálcico">Preventivo - Caldo Sulfocálcico</option>
+                <option value="Labor - Deshierbe">Labor - Deshierbe manual</option>
+                <option value="Labor - Poda">Labor - Poda</option>
+                <option value="Otro">Otro (Especificar en observaciones)</option>
+            </select>
+            
+            <label>Dosis / Cantidad (opcional):</label>
+            <input type="text" name="dosis_cantidad" placeholder="Ej. 2 Litros, 5 Kg">
+            
+            <label>Motivo:</label>
+            <input type="text" name="motivo" placeholder="Ej. Nutrición, Prevención de hongos">
+            
+            <label>Observaciones:</label>
+            <textarea name="observaciones" rows="3"></textarea>
+            
+            <button type="submit">Guardar en Bitácora</button>
+        </form>
+        <div id="msgBitacora" class="mensaje"></div>
+    </div>
+
+    <script>
+        document.getElementById('formBitacora').onsubmit = async (e) => {
+            e.preventDefault();
+            let res = await fetch('/api/bitacora-manejo/', { method: 'POST', body: new FormData(e.target) });
+            let msgDiv = document.getElementById('msgBitacora');
+            
+            if(res.ok) {
+                let data = await res.json();
+                msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong>`;
+                msgDiv.style.display = 'block';
+                msgDiv.style.backgroundColor = '#e8f5e9';
+                msgDiv.style.color = '#2e7d32';
+                e.target.reset();
+            } else {
+                msgDiv.innerHTML = `❌ Error: El ID Lote ingresado no existe.`;
+                msgDiv.style.display = 'block';
+                msgDiv.style.backgroundColor = '#ffebee';
+                msgDiv.style.color = '#c62828';
+            }
+            setTimeout(() => msgDiv.style.display = 'none', 6000);
+        };
+    </script>
+</body>
+</html>
