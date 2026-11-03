@@ -51,3 +51,16 @@ class RegistroCasaMalla(Base):
     
     estado = Column(String(50), default="Semillero") # Semillero, Trasplantado, En Cosecha, Finalizado
     observaciones = Column(Text, nullable=True)
+
+# 3. Bitácora de manejo e insumos para la Casa Malla
+class BitacoraManejo(Base):
+    __tablename__ = "bitacora_manejo"
+
+    id = Column(Integer, primary_key=True, index=True)
+    casa_malla_id = Column(Integer, ForeignKey("registros_casa_malla.id"))
+    
+    fecha_aplicacion = Column(DateTime, nullable=False)
+    tipo_insumo_labor = Column(String(100), nullable=False) # Ej: Bocashi, Biol, Poda, Deshierbe
+    dosis_cantidad = Column(String(100), nullable=True)     # Ej: 2 Litros/Cama, 5 kg
+    motivo = Column(String(100), nullable=True)             # Ej: Nutrición, Control preventivo
+    observaciones = Column(Text, nullable=True)

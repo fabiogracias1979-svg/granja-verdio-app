@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
-from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla
+from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla, BitacoraManejo
 from .drive_service import upload_file_to_drive
 
 # Crea las tablas si no existen
@@ -216,3 +216,35 @@ def registrar_casa_malla(
             "cosecha_esperada": fecha_cosecha_est.strftime("%Y-%m-%d")
         }
     }
+
+# 3. Registrar insumo o labor en la bitácora de Casa Malla
+@app.post("/api/bitacora-manejo/")
+def registrar_bitacora(
+    casa_malla_id: int = Form(...),
+    fecha_aplicacion: str = Form(...),
+    tipo_insumo_labor: str = Form(...),
+    dosis_cantidad: str = Form(""),
+    motivo: str = Form(""),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    # Validar que la cama/siembra exista
+    registro_cama = db.query(RegistroCasaMalla).filter(RegistroCasaMalla.id == casa_malla_id).first()
+    if not registro_cama:
+        raise HTTPException(status_code=404, detail="El registro del bancal no existe.")
+
+    fecha_dt = datetime.strptime(fecha_aplicacion, "%Y-%m-%d")
+
+    nueva_bitacora = BitacoraManejo(
+        casa_malla_id=casa_malla_id,
+        fecha_aplicacion=fecha_dt,
+        tipo_insumo_labor=tipo_insumo_labor,
+        dosis_cantidad=dosis_cantidad,
+        motivo=motivo,
+        observaciones=observaciones
+    )
+    
+    db.add(nueva_bitacora)
+    db.commit()
+
+    return {"status": "success", "mensaje": "Manejo registrado correctamente en la bitácora."}
