@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infraestructura y Agua - Granja Verdio</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; max-width: 700px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2, h3 { color: #2e7d32; text-align: center; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 20px; }
+        .mensaje-exito { display: none; background-color: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px; margin-top: 15px; border: 1px solid #c8e6c9; text-align: center; line-height: 1.5; }
+        .mensaje-error { display: none; background-color: #ffebee; color: #c62828; padding: 15px; border-radius: 5px; margin-top: 15px; border: 1px solid #ffcdd2; text-align: center; }
+    </style>
+</head>
+<body>
+    <h2>🏗️ Infraestructura y Recursos</h2>
+    
+    <!-- Módulo 1: Registro Físico de la Obra -->
+    <div class="card">
+        <h3>1. Inventario de Obras Físicas</h3>
+        <form id="formInfra">
+            <label>Nombre de la Obra (Ej. Torre de Tinaco):</label>
+            <input type="text" name="nombre_obra" required>
+            
+            <label>Categoría:</label>
+            <select name="categoria" required>
+                <option value="Hidráulica">Hidráulica (Agua, Riego)</option>
+                <option value="Saneamiento">Saneamiento (Baño seco, Composteras)</option>
+                <option value="Vivienda">Vivienda (Mediagua, Bodega)</option>
+                <option value="Otra">Otra</option>
+            </select>
+
+            <label>Estado Actual:</label>
+            <select name="estado" required>
+                <option value="En construcción">En construcción</option>
+                <option value="Operativa" selected>Operativa</option>
+                <option value="En mantenimiento">En mantenimiento</option>
+            </select>
+            
+            <label>Capacidad Instalada (Ej. 2500 Litros):</label>
+            <input type="text" name="capacidad_instalada">
+            
+            <label>Materiales Clave:</label>
+            <input type="text" name="materiales_clave" placeholder="Ej. Madera curada, tanque plástico">
+
+            <label>Coordenadas (Latitud, Longitud) - Opcional:</label>
+            <input type="text" name="coordenadas" placeholder="Ej. 14.0583, -89.2612">
+
+            <label>Foto de la Obra (Se guardará en Drive):</label>
+            <input type="file" name="archivo" accept="image/*">
+            
+            <button type="submit">Guardar Obra</button>
+        </form>
+        <div id="msgInfra" class="mensaje-exito"></div>
+    </div>
+
+    <!-- Módulo 2: Bitácora del Agua -->
+    <div class="card">
+        <h3>💧 Bitácora del Recurso Hídrico</h3>
+        <form id="formAgua">
+            <label>ID de la Infraestructura (Ej. ID de la Torre):</label>
+            <input type="number" name="infraestructura_id" required>
+            
+            <label>Fecha de Registro:</label>
+            <input type="date" name="fecha_registro" required>
+            
+            <label>Tipo de Movimiento:</label>
+            <select name="tipo_movimiento" required>
+                <option value="" disabled selected>Selecciona una opción...</option>
+                <option value="Recarga (Lluvia)">Entrada - Recarga por Lluvia</option>
+                <option value="Recarga (Pozo)">Entrada - Recarga por Pozo/Bomba</option>
+                <option value="Consumo (Riego Bancales)">Salida - Consumo para Riego</option>
+                <option value="Consumo (Uso Doméstico)">Salida - Uso Doméstico</option>
+                <option value="Mantenimiento">Mantenimiento / Limpieza</option>
+            </select>
+            
+            <label>Volumen (Litros):</label>
+            <input type="number" name="volumen_litros" placeholder="Ej. 500">
+            
+            <label>Observaciones:</label>
+            <textarea name="observaciones" rows="3"></textarea>
+            
+            <button type="submit">Registrar Movimiento</button>
+        </form>
+        <div id="msgAgua" class="mensaje-exito"></div>
+        <div id="errAgua" class="mensaje-error"></div>
+    </div>
+
+    <script>
+        // Enviar formulario de Infraestructura
+        document.getElementById('formInfra').onsubmit = async (e) => {
+            e.preventDefault();
+            let msgDiv = document.getElementById('msgInfra');
+            msgDiv.style.display = 'none';
+            msgDiv.innerHTML = "⏳ Subiendo datos y foto... por favor espera.";
+            msgDiv.style.display = 'block';
+
+            let res = await fetch('/api/infraestructura/', { method: 'POST', body: new FormData(e.target) });
+            if(res.ok) {
+                let data = await res.json();
+                msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong><br>El ID de esta obra es: <b>${data.id}</b>`;
+                e.target.reset();
+            } else {
+                msgDiv.innerHTML = `❌ Ocurrió un error al guardar la obra.`;
+                msgDiv.className = 'mensaje-error';
+            }
+            setTimeout(() => { msgDiv.style.display = 'none'; msgDiv.className = 'mensaje-exito'; }, 8000);
+        };
+
+        // Enviar formulario de Agua
+        document.getElementById('formAgua').onsubmit = async (e) => {
+            e.preventDefault();
+            let msgDiv = document.getElementById('msgAgua');
+            let errDiv = document.getElementById('errAgua');
+            msgDiv.style.display = 'none';
+            errDiv.style.display = 'none';
+
+            let res = await fetch('/api/registro-agua/', { method: 'POST', body: new FormData(e.target) });
+            
+            if(res.ok) {
+                let data = await res.json();
+                msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong>`;
+                msgDiv.style.display = 'block';
+                e.target.reset();
+            } else {
+                errDiv.innerHTML = `❌ Error: El ID de la infraestructura no existe. Verifica que la obra esté registrada.`;
+                errDiv.style.display = 'block';
+            }
+            setTimeout(() => { msgDiv.style.display = 'none'; errDiv.style.display = 'none'; }, 6000);
+        };
+    </script>
+</body>
+</html>

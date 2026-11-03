@@ -7,21 +7,23 @@ from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
-from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla, BitacoraManejo
+from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla, BitacoraManejo, Infraestructura, RegistroAgua
 from .drive_service import upload_file_to_drive
 
 # Crea las tablas si no existen
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Gestión de Frutales y Casa Malla - Granja Verdio")
+app = FastAPI(title="Gestión de Granja Verdio")
 templates = Jinja2Templates(directory="templates")
 
-# Formulario web
+# ==========================================
+#               VISTAS WEB
+# ==========================================
+
 @app.get("/", response_class=HTMLResponse)
 def ver_formulario(request: Request):
     return templates.TemplateResponse(request=request, name="formulario.html")
 
-# Catálogo web
 @app.get("/registros", response_class=HTMLResponse)
 def ver_registros(request: Request, db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).order_by(RegistroFrutal.id.desc()).all()
@@ -31,12 +33,35 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
         context={"registros": registros}
     )
 
-# Vista web de la Casa Malla
 @app.get("/casa-malla", response_class=HTMLResponse)
 def ver_casa_malla(request: Request):
     return templates.TemplateResponse(request=request, name="casa_malla.html")
 
-# Endpoint que recibe el formulario
+@app.get("/tablero-casa-malla", response_class=HTMLResponse)
+def ver_tablero_casa_malla(request: Request, db: Session = Depends(get_db)):
+    siembras = db.query(RegistroCasaMalla).order_by(RegistroCasaMalla.id.desc()).all()
+    datos_tablero = []
+    for s in siembras:
+        cultivo = db.query(CatalogoCultivo).filter(CatalogoCultivo.id == s.cultivo_id).first()
+        datos_tablero.append({
+            "id": s.id,
+            "cama": s.identificador_cama,
+            "cultivo": cultivo.especie_variedad if cultivo else "Desconocido",
+            "estado": s.estado,
+            "trasplante": s.fecha_trasplante_estimada.strftime("%d/%m/%Y") if s.fecha_trasplante_estimada else "N/A",
+            "cosecha": s.fecha_cosecha_estimada.strftime("%d/%m/%Y") if s.fecha_cosecha_estimada else "N/A"
+        })
+    return templates.TemplateResponse(request=request, name="tablero_casa_malla.html", context={"siembras": datos_tablero})
+
+@app.get("/infraestructura", response_class=HTMLResponse)
+def ver_infraestructura(request: Request):
+    return templates.TemplateResponse(request=request, name="infraestructura.html")
+
+
+# ==========================================
+#           MÓDULO DE FRUTALES
+# ==========================================
+
 @app.post("/api/registro-frutal/")
 async def registrar_frutal(
     especie_variedad: str = Form(...),
@@ -53,57 +78,36 @@ async def registrar_frutal(
     archivo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
-    # Intentar subir la foto a Drive
     drive_url = ""
     if archivo and archivo.filename:
         try:
             drive_url = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
         except Exception as e:
             print(f"Error al subir a Google Drive: {e}")
-            drive_url = ""
-
-    # Como imagen_drive_url es nullable=False en models.py, asignamos un valor por defecto si falla Drive
     if not drive_url:
         drive_url = "Sin imagen disponible"
 
-    # Mapeo exacto a las columnas del modelo RegistroFrutal
     nuevo_registro = RegistroFrutal(
-        especie_variedad=especie_variedad,
-        lote_sector=lote_sector,
-        fecha_siembra=fecha_siembra,
-        edad_meses=edad_meses,
-        tipo_riego=tipo_riego,
-        control_plagas=control_plagas,
-        manejo_general=manejo_general,
-        etapa_fenologica=etapa_fenologica,
-        estado_fitosanitario=estado_fitosanitario,
-        coordenadas=coordenadas,
-        observaciones=observaciones,
-        imagen_drive_url=drive_url
+        especie_variedad=especie_variedad, lote_sector=lote_sector, fecha_siembra=fecha_siembra,
+        edad_meses=edad_meses, tipo_riego=tipo_riego, control_plagas=control_plagas,
+        manejo_general=manejo_general, etapa_fenologica=etapa_fenologica,
+        estado_fitosanitario=estado_fitosanitario, coordenadas=coordenadas,
+        observaciones=observaciones, imagen_drive_url=drive_url
     )
-    
     db.add(nuevo_registro)
     db.commit()
     db.refresh(nuevo_registro)
 
-    return JSONResponse(content={
-        "status": "success",
-        "mensaje": "Expediente guardado exitosamente",
-        "id": nuevo_registro.id,
-        "drive_url": drive_url
-    })
+    return JSONResponse(content={"status": "success", "mensaje": "Expediente guardado exitosamente", "id": nuevo_registro.id, "drive_url": drive_url})
 
-# Exportación directa GeoJSON para QGIS y ArcGIS Pro
 @app.get("/export/geojson")
 def export_geojson(db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).all()
     features = []
-
     for r in registros:
         coord_str = getattr(r, "coordenadas", "")
         if not coord_str or "," not in coord_str:
             continue
-
         try:
             partes = coord_str.split(",")
             lat = float(partes[0].strip())
@@ -113,164 +117,138 @@ def export_geojson(db: Session = Depends(get_db)):
 
         feature = {
             "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": [lon, lat]  # GeoJSON estándar: [Longitud, Latitud]
-            },
+            "geometry": {"type": "Point", "coordinates": [lon, lat]},
             "properties": {
-                "id": r.id,
-                "especie_variedad": getattr(r, "especie_variedad", "N/A"),
-                "lote_sector": getattr(r, "lote_sector", "N/A"),
-                "fecha_siembra": str(getattr(r, "fecha_siembra", "")),
-                "edad_meses": getattr(r, "edad_meses", None),
-                "tipo_riego": getattr(r, "tipo_riego", "N/A"),
-                "etapa_fenologica": getattr(r, "etapa_fenologica", "N/A"),
-                "estado_fitosanitario": getattr(r, "estado_fitosanitario", "N/A"),
-                "control_plagas": getattr(r, "control_plagas", ""),
-                "manejo_general": getattr(r, "manejo_general", ""),
-                "observaciones": getattr(r, "observaciones", ""),
-                "fecha_registro": str(getattr(r, "fecha_registro", "")),
+                "id": r.id, "especie_variedad": getattr(r, "especie_variedad", "N/A"),
+                "lote_sector": getattr(r, "lote_sector", "N/A"), "fecha_siembra": str(getattr(r, "fecha_siembra", "")),
+                "edad_meses": getattr(r, "edad_meses", None), "tipo_riego": getattr(r, "tipo_riego", "N/A"),
+                "etapa_fenologica": getattr(r, "etapa_fenologica", "N/A"), "estado_fitosanitario": getattr(r, "estado_fitosanitario", "N/A"),
+                "control_plagas": getattr(r, "control_plagas", ""), "manejo_general": getattr(r, "manejo_general", ""),
+                "observaciones": getattr(r, "observaciones", ""), "fecha_registro": str(getattr(r, "fecha_registro", "")),
                 "imagen_url": getattr(r, "imagen_drive_url", "")
             }
         }
         features.append(feature)
 
-    geojson_data = {
-        "type": "FeatureCollection",
-        "name": "Granja_Verdio_Frutales",
-        "crs": {
-            "type": "name",
-            "properties": {
-                "name": "urn:ogc:def:crs:OGC:1.3:CRS84"
-            }
-        },
-        "features": features
-    }
-
-    return Response(
-        content=json.dumps(geojson_data, ensure_ascii=False, indent=2),
-        media_type="application/geo+json",
-        headers={"Content-Disposition": "attachment; filename=granja_verdio_datos.geojson"}
-    )
+    geojson_data = {"type": "FeatureCollection", "name": "Granja_Verdio_Frutales", "crs": {"type": "name", "properties": {"name": "urn:ogc:def:crs:OGC:1.3:CRS84"}}, "features": features}
+    return Response(content=json.dumps(geojson_data, ensure_ascii=False, indent=2), media_type="application/geo+json", headers={"Content-Disposition": "attachment; filename=granja_verdio_datos.geojson"})
 
 # ==========================================
 #        MÓDULO DE CASA MALLA
 # ==========================================
 
-# 1. Agregar un nuevo cultivo al recetario (Catálogo)
 @app.post("/api/catalogo-cultivo/")
 def agregar_cultivo_catalogo(
-    especie_variedad: str = Form(...),
-    dias_a_trasplante: int = Form(...),
-    dias_a_cosecha: int = Form(...),
-    db: Session = Depends(get_db)
+    especie_variedad: str = Form(...), dias_a_trasplante: int = Form(...),
+    dias_a_cosecha: int = Form(...), db: Session = Depends(get_db)
 ):
-    nuevo_cultivo = CatalogoCultivo(
-        especie_variedad=especie_variedad,
-        dias_a_trasplante=dias_a_trasplante,
-        dias_a_cosecha=dias_a_cosecha
-    )
+    nuevo_cultivo = CatalogoCultivo(especie_variedad=especie_variedad, dias_a_trasplante=dias_a_trasplante, dias_a_cosecha=dias_a_cosecha)
     db.add(nuevo_cultivo)
     db.commit()
     return {"status": "success", "mensaje": "Cultivo agregado al catálogo"}
 
-# 2. Registrar siembra y calcular fechas automáticamente
 @app.post("/api/registro-casa-malla/")
 def registrar_casa_malla(
-    identificador_cama: str = Form(...),
-    cultivo_id: int = Form(...),
-    fecha_semillero: str = Form(...), # Formato esperado: YYYY-MM-DD
-    observaciones: str = Form(""),
-    db: Session = Depends(get_db)
+    identificador_cama: str = Form(...), cultivo_id: int = Form(...),
+    fecha_semillero: str = Form(...), observaciones: str = Form(""), db: Session = Depends(get_db)
 ):
-    # Buscar el cultivo para saber cuántos días tarda
     cultivo = db.query(CatalogoCultivo).filter(CatalogoCultivo.id == cultivo_id).first()
     if not cultivo:
         raise HTTPException(status_code=404, detail="Cultivo no encontrado en el catálogo")
-
-    # Convertir el texto de la fecha a un objeto de tiempo en Python
     fecha_semillero_dt = datetime.strptime(fecha_semillero, "%Y-%m-%d")
-
-    # MATEMÁTICA AGRONÓMICA: El asistente calcula las fechas
     fecha_trasplante_est = fecha_semillero_dt + timedelta(days=cultivo.dias_a_trasplante)
     fecha_cosecha_est = fecha_trasplante_est + timedelta(days=cultivo.dias_a_cosecha)
 
     nuevo_registro = RegistroCasaMalla(
-        identificador_cama=identificador_cama,
-        cultivo_id=cultivo_id,
-        fecha_semillero=fecha_semillero_dt,
-        fecha_trasplante_estimada=fecha_trasplante_est,
-        fecha_cosecha_estimada=fecha_cosecha_est,
-        observaciones=observaciones,
-        estado="Semillero"
+        identificador_cama=identificador_cama, cultivo_id=cultivo_id, fecha_semillero=fecha_semillero_dt,
+        fecha_trasplante_estimada=fecha_trasplante_est, fecha_cosecha_estimada=fecha_cosecha_est,
+        observaciones=observaciones, estado="Semillero"
     )
-    
     db.add(nuevo_registro)
     db.commit()
+    return {"status": "success", "mensaje": "Siembra registrada con éxito.", "fechas_calculadas": {"trasplante_esperado": fecha_trasplante_est.strftime("%Y-%m-%d"), "cosecha_esperada": fecha_cosecha_est.strftime("%Y-%m-%d")}}
 
-    return {
-        "status": "success", 
-        "mensaje": "Siembra registrada con éxito.",
-        "fechas_calculadas": {
-            "trasplante_esperado": fecha_trasplante_est.strftime("%Y-%m-%d"),
-            "cosecha_esperada": fecha_cosecha_est.strftime("%Y-%m-%d")
-        }
-    }
-
-# 3. Registrar insumo o labor en la bitácora de Casa Malla
 @app.post("/api/bitacora-manejo/")
 def registrar_bitacora(
-    casa_malla_id: int = Form(...),
-    fecha_aplicacion: str = Form(...),
-    tipo_insumo_labor: str = Form(...),
-    dosis_cantidad: str = Form(""),
-    motivo: str = Form(""),
-    observaciones: str = Form(""),
-    db: Session = Depends(get_db)
+    casa_malla_id: int = Form(...), fecha_aplicacion: str = Form(...), tipo_insumo_labor: str = Form(...),
+    dosis_cantidad: str = Form(""), motivo: str = Form(""), observaciones: str = Form(""), db: Session = Depends(get_db)
 ):
-    # Validar que la cama/siembra exista
     registro_cama = db.query(RegistroCasaMalla).filter(RegistroCasaMalla.id == casa_malla_id).first()
     if not registro_cama:
         raise HTTPException(status_code=404, detail="El registro del bancal no existe.")
-
     fecha_dt = datetime.strptime(fecha_aplicacion, "%Y-%m-%d")
 
     nueva_bitacora = BitacoraManejo(
-        casa_malla_id=casa_malla_id,
-        fecha_aplicacion=fecha_dt,
-        tipo_insumo_labor=tipo_insumo_labor,
-        dosis_cantidad=dosis_cantidad,
-        motivo=motivo,
+        casa_malla_id=casa_malla_id, fecha_aplicacion=fecha_dt, tipo_insumo_labor=tipo_insumo_labor,
+        dosis_cantidad=dosis_cantidad, motivo=motivo, observaciones=observaciones
+    )
+    db.add(nueva_bitacora)
+    db.commit()
+    return {"status": "success", "mensaje": "Manejo registrado correctamente en la bitácora."}
+
+# ==========================================
+#  MÓDULO DE INFRAESTRUCTURA Y RECURSOS
+# ==========================================
+
+@app.post("/api/infraestructura/")
+async def registrar_infraestructura(
+    nombre_obra: str = Form(...),
+    categoria: str = Form(...),
+    estado: str = Form("Operativa"),
+    capacidad_instalada: str = Form(""),
+    materiales_clave: str = Form(""),
+    coordenadas: str = Form(""),
+    observaciones: str = Form(""),
+    archivo: UploadFile = File(None),
+    db: Session = Depends(get_db)
+):
+    drive_url = ""
+    if archivo and archivo.filename:
+        try:
+            drive_url = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+        except Exception as e:
+            print(f"Error al subir a Google Drive: {e}")
+            
+    nueva_obra = Infraestructura(
+        nombre_obra=nombre_obra,
+        categoria=categoria,
+        estado=estado,
+        capacidad_instalada=capacidad_instalada,
+        materiales_clave=materiales_clave,
+        coordenadas=coordenadas,
+        imagen_drive_url=drive_url
+    )
+    
+    db.add(nueva_obra)
+    db.commit()
+    db.refresh(nueva_obra)
+    
+    return JSONResponse(content={"status": "success", "mensaje": f"{nombre_obra} registrada exitosamente", "id": nueva_obra.id})
+
+@app.post("/api/registro-agua/")
+def registrar_agua(
+    infraestructura_id: int = Form(...),
+    fecha_registro: str = Form(...),
+    tipo_movimiento: str = Form(...),
+    volumen_litros: int = Form(0),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    obra = db.query(Infraestructura).filter(Infraestructura.id == infraestructura_id).first()
+    if not obra:
+        raise HTTPException(status_code=404, detail="La infraestructura especificada no existe.")
+        
+    fecha_dt = datetime.strptime(fecha_registro, "%Y-%m-%d")
+    
+    nuevo_movimiento = RegistroAgua(
+        infraestructura_id=infraestructura_id,
+        fecha_registro=fecha_dt,
+        tipo_movimiento=tipo_movimiento,
+        volumen_litros=volumen_litros,
         observaciones=observaciones
     )
     
-    db.add(nueva_bitacora)
+    db.add(nuevo_movimiento)
     db.commit()
-
-    return {"status": "success", "mensaje": "Manejo registrado correctamente en la bitácora."}
-
-
-
-# Vista web: Tablero de Control de la Casa Malla
-@app.get("/tablero-casa-malla", response_class=HTMLResponse)
-def ver_tablero_casa_malla(request: Request, db: Session = Depends(get_db)):
-    siembras = db.query(RegistroCasaMalla).order_by(RegistroCasaMalla.id.desc()).all()
     
-    # Preparamos los datos combinando la siembra con el nombre del cultivo
-    datos_tablero = []
-    for s in siembras:
-        cultivo = db.query(CatalogoCultivo).filter(CatalogoCultivo.id == s.cultivo_id).first()
-        datos_tablero.append({
-            "id": s.id,
-            "cama": s.identificador_cama,
-            "cultivo": cultivo.especie_variedad if cultivo else "Desconocido",
-            "estado": s.estado,
-            "trasplante": s.fecha_trasplante_estimada.strftime("%d/%m/%Y") if s.fecha_trasplante_estimada else "N/A",
-            "cosecha": s.fecha_cosecha_estimada.strftime("%d/%m/%Y") if s.fecha_cosecha_estimada else "N/A"
-        })
-
-    return templates.TemplateResponse(
-        request=request, 
-        name="tablero_casa_malla.html", 
-        context={"siembras": datos_tablero}
-    )
+    return {"status": "success", "mensaje": "Movimiento de agua registrado correctamente."}
