@@ -1,18 +1,19 @@
 ﻿import json
 import io
 import pandas as pd
+from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, Depends, Request, HTTPException, Query, Response
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
-from .models import RegistroFrutal
+from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla
 from .drive_service import upload_file_to_drive
 
 # Crea las tablas si no existen
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="Gestión de Frutales - Granja Verdio")
+app = FastAPI(title="Gestión de Frutales y Casa Malla - Granja Verdio")
 templates = Jinja2Templates(directory="templates")
 
 # Formulario web
@@ -29,6 +30,11 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
         name="registros.html", 
         context={"registros": registros}
     )
+
+# Vista web de la Casa Malla
+@app.get("/casa-malla", response_class=HTMLResponse)
+def ver_casa_malla(request: Request):
+    return templates.TemplateResponse(request=request, name="casa_malla.html")
 
 # Endpoint que recibe el formulario
 @app.post("/api/registro-frutal/")
@@ -146,3 +152,67 @@ def export_geojson(db: Session = Depends(get_db)):
         media_type="application/geo+json",
         headers={"Content-Disposition": "attachment; filename=granja_verdio_datos.geojson"}
     )
+
+# ==========================================
+#        MÓDULO DE CASA MALLA
+# ==========================================
+
+# 1. Agregar un nuevo cultivo al recetario (Catálogo)
+@app.post("/api/catalogo-cultivo/")
+def agregar_cultivo_catalogo(
+    especie_variedad: str = Form(...),
+    dias_a_trasplante: int = Form(...),
+    dias_a_cosecha: int = Form(...),
+    db: Session = Depends(get_db)
+):
+    nuevo_cultivo = CatalogoCultivo(
+        especie_variedad=especie_variedad,
+        dias_a_trasplante=dias_a_trasplante,
+        dias_a_cosecha=dias_a_cosecha
+    )
+    db.add(nuevo_cultivo)
+    db.commit()
+    return {"status": "success", "mensaje": "Cultivo agregado al catálogo"}
+
+# 2. Registrar siembra y calcular fechas automáticamente
+@app.post("/api/registro-casa-malla/")
+def registrar_casa_malla(
+    identificador_cama: str = Form(...),
+    cultivo_id: int = Form(...),
+    fecha_semillero: str = Form(...), # Formato esperado: YYYY-MM-DD
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    # Buscar el cultivo para saber cuántos días tarda
+    cultivo = db.query(CatalogoCultivo).filter(CatalogoCultivo.id == cultivo_id).first()
+    if not cultivo:
+        raise HTTPException(status_code=404, detail="Cultivo no encontrado en el catálogo")
+
+    # Convertir el texto de la fecha a un objeto de tiempo en Python
+    fecha_semillero_dt = datetime.strptime(fecha_semillero, "%Y-%m-%d")
+
+    # MATEMÁTICA AGRONÓMICA: El asistente calcula las fechas
+    fecha_trasplante_est = fecha_semillero_dt + timedelta(days=cultivo.dias_a_trasplante)
+    fecha_cosecha_est = fecha_trasplante_est + timedelta(days=cultivo.dias_a_cosecha)
+
+    nuevo_registro = RegistroCasaMalla(
+        identificador_cama=identificador_cama,
+        cultivo_id=cultivo_id,
+        fecha_semillero=fecha_semillero_dt,
+        fecha_trasplante_estimada=fecha_trasplante_est,
+        fecha_cosecha_estimada=fecha_cosecha_est,
+        observaciones=observaciones,
+        estado="Semillero"
+    )
+    
+    db.add(nuevo_registro)
+    db.commit()
+
+    return {
+        "status": "success", 
+        "mensaje": "Siembra registrada con éxito.",
+        "fechas_calculadas": {
+            "trasplante_esperado": fecha_trasplante_est.strftime("%Y-%m-%d"),
+            "cosecha_esperada": fecha_cosecha_est.strftime("%Y-%m-%d")
+        }
+    }

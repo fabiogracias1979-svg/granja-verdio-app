@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Casa Malla - Granja Verdio</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; max-width: 600px; margin: auto; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        h2 { color: #2e7d32; text-align: center; }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+        input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
+        button { background-color: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h2>🌱 Gestión de Casa Malla</h2>
+    
+    <!-- Módulo 1: Recetario -->
+    <div class="card">
+        <h3>1. Agregar al Recetario</h3>
+        <form id="formCatalogo">
+            <label>Especie y Variedad (Ej. Tomate Roma):</label>
+            <input type="text" name="especie_variedad" required>
+            <label>Días en semillero (hasta trasplante):</label>
+            <input type="number" name="dias_a_trasplante" required>
+            <label>Días desde trasplante hasta cosecha:</label>
+            <input type="number" name="dias_a_cosecha" required>
+            <button type="submit">Guardar Cultivo</button>
+        </form>
+    </div>
+
+    <!-- Módulo 2: Siembra Operativa -->
+    <div class="card">
+        <h3>2. Registrar Siembra en Bancal</h3>
+        <form id="formSiembra">
+            <label>Identificador de Cama/Bancal:</label>
+            <input type="text" name="identificador_cama" placeholder="Ej. Bancal A" required>
+            <label>ID del Cultivo (del recetario):</label>
+            <input type="number" name="cultivo_id" placeholder="Ej. 1" required>
+            <label>Fecha de Semillero:</label>
+            <input type="date" name="fecha_semillero" required>
+            <label>Observaciones:</label>
+            <textarea name="observaciones" rows="3"></textarea>
+            <button type="submit">Registrar y Calcular Fechas</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('formCatalogo').onsubmit = async (e) => {
+            e.preventDefault();
+            let res = await fetch('/api/catalogo-cultivo/', { method: 'POST', body: new FormData(e.target) });
+            let data = await res.json();
+            alert(data.mensaje);
+            e.target.reset();
+        };
+
+        document.getElementById('formSiembra').onsubmit = async (e) => {
+            e.preventDefault();
+            let res = await fetch('/api/registro-casa-malla/', { method: 'POST', body: new FormData(e.target) });
+            let data = await res.json();
+            if(data.status === 'success') {
+                alert(`✅ ${data.mensaje}\n📅 Trasplante estimado: ${data.fechas_calculadas.trasplante_esperado}\n🍅 Cosecha estimada: ${data.fechas_calculadas.cosecha_esperada}`);
+                e.target.reset();
+            } else {
+                alert("Error: El ID del cultivo no existe en tu recetario.");
+            }
+        };
+    </script>
+</body>
+</html>
