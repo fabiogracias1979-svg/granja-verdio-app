@@ -11,7 +11,6 @@
         label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
         input, select, textarea, button { width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box; }
         button { background-color: #2e7d32; color: white; border: none; font-size: 16px; cursor: pointer; margin-top: 20px; }
-        /* Estilos para los cuadros de mensaje integrados */
         .mensaje-exito { display: none; background-color: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px; margin-top: 15px; border: 1px solid #c8e6c9; text-align: center; line-height: 1.5; }
         .mensaje-error { display: none; background-color: #ffebee; color: #c62828; padding: 15px; border-radius: 5px; margin-top: 15px; border: 1px solid #ffcdd2; text-align: center; }
     </style>
@@ -31,7 +30,6 @@
             <input type="number" name="dias_a_cosecha" required>
             <button type="submit">Guardar Cultivo</button>
         </form>
-        <!-- Contenedor del mensaje de éxito -->
         <div id="msgCatalogo" class="mensaje-exito"></div>
     </div>
 
@@ -41,15 +39,22 @@
         <form id="formSiembra">
             <label>Identificador de Cama/Bancal:</label>
             <input type="text" name="identificador_cama" placeholder="Ej. Bancal A" required>
-            <label>ID del Cultivo (del recetario):</label>
-            <input type="number" name="cultivo_id" placeholder="Ej. 1" required>
+            
+            <!-- Lista desplegable conectada a la base de datos -->
+            <label>Cultivo (del recetario):</label>
+            <select name="cultivo_id" required>
+                <option value="" disabled selected>Selecciona un cultivo guardado...</option>
+                {% for c in cultivos %}
+                <option value="{{ c.id }}">{{ c.especie_variedad }}</option>
+                {% endfor %}
+            </select>
+            
             <label>Fecha de Semillero:</label>
             <input type="date" name="fecha_semillero" required>
             <label>Observaciones:</label>
             <textarea name="observaciones" rows="3"></textarea>
             <button type="submit">Registrar y Calcular Fechas</button>
         </form>
-        <!-- Contenedores de mensajes -->
         <div id="msgSiembra" class="mensaje-exito"></div>
         <div id="errSiembra" class="mensaje-error"></div>
     </div>
@@ -60,35 +65,5 @@
             let res = await fetch('/api/catalogo-cultivo/', { method: 'POST', body: new FormData(e.target) });
             let data = await res.json();
             
-            // Mostrar mensaje integrado
             let msgDiv = document.getElementById('msgCatalogo');
-            msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong>`;
-            msgDiv.style.display = 'block';
-            
-            // Ocultar el mensaje después de 5 segundos
-            setTimeout(() => msgDiv.style.display = 'none', 5000);
-            e.target.reset();
-        };
-
-        document.getElementById('formSiembra').onsubmit = async (e) => {
-            e.preventDefault();
-            let res = await fetch('/api/registro-casa-malla/', { method: 'POST', body: new FormData(e.target) });
-            
-            let msgDiv = document.getElementById('msgSiembra');
-            let errDiv = document.getElementById('errSiembra');
-            msgDiv.style.display = 'none';
-            errDiv.style.display = 'none';
-
-            if(res.ok) {
-                let data = await res.json();
-                msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong><br><br>📅 Trasplante estimado: <b>${data.fechas_calculadas.trasplante_esperado}</b><br>🍅 Cosecha estimada: <b>${data.fechas_calculadas.cosecha_esperada}</b>`;
-                msgDiv.style.display = 'block';
-                e.target.reset();
-            } else {
-                errDiv.innerHTML = `❌ Error: El ID del cultivo no existe en tu recetario.`;
-                errDiv.style.display = 'block';
-            }
-        };
-    </script>
-</body>
-</html>
+            msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong>`; msgDiv.style.display = 'block';  setTimeout(() => msgDiv.style.display = 'none', 5000); e.target.reset();  // Refrescar página para actualizar la lista desplegable de abajo setTimeout(() => location.reload(), 1500); };  document.getElementById('formSiembra').onsubmit = async (e) => { e.preventDefault(); let res = await fetch('/api/registro-casa-malla/', { method: 'POST', body: new FormData(e.target) });  let msgDiv = document.getElementById('msgSiembra'); let errDiv = document.getElementById('errSiembra'); msgDiv.style.display = 'none'; errDiv.style.display = 'none';  if(res.ok) { let data = await res.json(); msgDiv.innerHTML = `✅ <strong>${data.mensaje}</strong><br><br>📅 Trasplante estimado: <b>${data.fechas_calculadas.trasplante_esperado}</b><br>
