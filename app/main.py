@@ -299,4 +299,25 @@ def registrar_agua(
     infraestructura_id: int = Form(...),
     fecha_registro: str = Form(...),
     tipo_movimiento: str = Form(...),
-    volumen_
+    volumen_litros: int = Form(0),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    obra = db.query(Infraestructura).filter(Infraestructura.id == infraestructura_id).first()
+    if not obra:
+        raise HTTPException(status_code=404, detail="La infraestructura especificada no existe.")
+        
+    fecha_dt = datetime.strptime(fecha_registro, "%Y-%m-%d")
+    
+    nuevo_movimiento = RegistroAgua(
+        infraestructura_id=infraestructura_id,
+        fecha_registro=fecha_dt,
+        tipo_movimiento=tipo_movimiento,
+        volumen_litros=volumen_litros,
+        observaciones=observaciones
+    )
+    
+    db.add(nuevo_movimiento)
+    db.commit()
+    
+    return {"status": "success", "mensaje": "Movimiento de agua registrado correctamente."}
