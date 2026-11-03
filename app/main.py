@@ -21,7 +21,11 @@ templates = Jinja2Templates(directory="templates")
 # ==========================================
 
 @app.get("/", response_class=HTMLResponse)
-def ver_formulario(request: Request):
+def ver_inicio(request: Request):
+    return templates.TemplateResponse(request=request, name="index.html")
+
+@app.get("/formulario-frutales", response_class=HTMLResponse)
+def ver_formulario_frutales(request: Request):
     return templates.TemplateResponse(request=request, name="formulario.html")
 
 @app.get("/registros", response_class=HTMLResponse)
