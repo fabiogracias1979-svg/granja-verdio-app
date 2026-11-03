@@ -125,6 +125,8 @@ async def registrar_frutal(
         "drive_url": drive_url
     })
 
+# Exportación GeoJSON (Soporta /exportar/geojson y /export/geojson)
+@app.get("/exportar/geojson")
 @app.get("/export/geojson")
 def export_geojson(db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).all()
@@ -171,6 +173,45 @@ def export_geojson(db: Session = Depends(get_db)):
         content=json.dumps(geojson_data, ensure_ascii=False, indent=2),
         media_type="application/geo+json",
         headers={"Content-Disposition": "attachment; filename=granja_verdio_datos.geojson"}
+    )
+
+# Exportación Excel (Soporta /exportar/excel y /export/excel)
+@app.get("/exportar/excel")
+@app.get("/export/excel")
+def export_excel(db: Session = Depends(get_db)):
+    registros = db.query(RegistroFrutal).all()
+    
+    data = []
+    for r in registros:
+        data.append({
+            "ID": r.id,
+            "Especie / Variedad": getattr(r, "especie_variedad", ""),
+            "Lote / Sector": getattr(r, "lote_sector", ""),
+            "Fecha Siembra": getattr(r, "fecha_siembra", ""),
+            "Edad (Meses)": getattr(r, "edad_meses", ""),
+            "Riego": getattr(r, "tipo_riego", ""),
+            "Fenología": getattr(r, "etapa_fenologica", ""),
+            "Condición Fitosanitaria": getattr(r, "estado_fitosanitario", ""),
+            "Control Plagas": getattr(r, "control_plagas", ""),
+            "Manejo General": getattr(r, "manejo_general", ""),
+            "Coordenadas": getattr(r, "coordenadas", ""),
+            "Observaciones": getattr(r, "observaciones", ""),
+            "URL Imagen Drive": getattr(r, "imagen_drive_url", "")
+        })
+
+    df = pd.DataFrame(data)
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Frutales')
+    output.seek(0)
+
+    headers = {
+        'Content-Disposition': 'attachment; filename="granja_verdio_frutales.xlsx"'
+    }
+    return StreamingResponse(
+        output,
+        media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        headers=headers
     )
 
 # ==========================================
