@@ -52,6 +52,7 @@ class RegistroCasaMalla(Base):
     estado = Column(String(50), default="Semillero") # Semillero, Trasplantado, En Cosecha, Finalizado
     observaciones = Column(Text, nullable=True)
 
+
 # 3. Bitácora de manejo e insumos para la Casa Malla
 class BitacoraManejo(Base):
     __tablename__ = "bitacora_manejo"
@@ -63,4 +64,37 @@ class BitacoraManejo(Base):
     tipo_insumo_labor = Column(String(100), nullable=False) # Ej: Bocashi, Biol, Poda, Deshierbe
     dosis_cantidad = Column(String(100), nullable=True)     # Ej: 2 Litros/Cama, 5 kg
     motivo = Column(String(100), nullable=True)             # Ej: Nutrición, Control preventivo
+    observaciones = Column(Text, nullable=True)
+
+
+
+
+# ==========================================
+#      MÓDULO DE INFRAESTRUCTURA Y RECURSOS
+# ==========================================
+
+# 4. Inventario de Obras Físicas
+class Infraestructura(Base):
+    __tablename__ = "infraestructura"
+
+    id = Column(Integer, primary_key=True, index=True)
+    nombre_obra = Column(String(100), nullable=False)       # Ej: Torre de Tinaco, Baño Seco
+    categoria = Column(String(100), nullable=False)         # Ej: Hidráulica, Saneamiento, Vivienda
+    estado = Column(String(50), default="Operativa")        # Ej: En construcción, Operativa, Mantenimiento
+    capacidad_instalada = Column(String(100), nullable=True)# Ej: 2500 Litros, 2 personas
+    materiales_clave = Column(Text, nullable=True)          # Ej: Madera curada, lámina zinc, biodigestor
+    coordenadas = Column(String(100), nullable=True)        # Para exportar a QGIS/ArcGIS
+    imagen_drive_url = Column(String(500), nullable=True)   # Foto de la obra
+    fecha_registro = Column(DateTime, default=datetime.utcnow)
+
+# 5. Bitácora de Gestión del Recurso Hídrico
+class RegistroAgua(Base):
+    __tablename__ = "registro_agua"
+
+    id = Column(Integer, primary_key=True, index=True)
+    infraestructura_id = Column(Integer, ForeignKey("infraestructura.id")) # Se vincula a la Torre de Tinaco, pozo, etc.
+    
+    fecha_registro = Column(DateTime, nullable=False)
+    tipo_movimiento = Column(String(50), nullable=False)    # Ej: Recarga (Lluvia), Recarga (Pozo), Consumo (Riego Bancales)
+    volumen_litros = Column(Integer, nullable=True)         # Cantidad de agua que entra o sale
     observaciones = Column(Text, nullable=True)
