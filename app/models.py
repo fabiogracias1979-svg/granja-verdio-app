@@ -9,7 +9,7 @@ class RegistroFrutal(Base):
     especie_variedad = Column(String(100), nullable=False)
     lote_sector = Column(String(100), nullable=False)
     
-    # Nuevos campos agronómicos
+    # Campos agronómicos
     fecha_siembra = Column(String(50), nullable=True)
     edad_meses = Column(Integer, nullable=True)
     tipo_riego = Column(String(100), nullable=True)

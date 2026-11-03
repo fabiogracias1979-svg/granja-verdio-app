@@ -9,18 +9,18 @@ from .database import engine, Base, get_db
 from .models import RegistroFrutal
 from .drive_service import upload_file_to_drive
 
-# Crea las tablas en PostgreSQL si aún no existen
+# Crea las tablas si no existen
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gestión de Frutales - Granja Verdio")
 templates = Jinja2Templates(directory="templates")
 
-# Vista del formulario principal
+# Formulario web
 @app.get("/", response_class=HTMLResponse)
 def ver_formulario(request: Request):
     return templates.TemplateResponse(request=request, name="formulario.html")
 
-# Vista de catálogo de registros
+# Catálogo web
 @app.get("/registros", response_class=HTMLResponse)
 def ver_registros(request: Request, db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).order_by(RegistroFrutal.id.desc()).all()
@@ -30,7 +30,7 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
         context={"registros": registros}
     )
 
-# Ruta exacta que llama el formulario HTML
+# Endpoint que recibe el formulario
 @app.post("/api/registro-frutal/")
 async def registrar_frutal(
     especie_variedad: str = Form(...),
@@ -43,10 +43,11 @@ async def registrar_frutal(
     control_plagas: str = Form(""),
     manejo_general: str = Form(""),
     coordenadas: str = Form(""),
+    observaciones: str = Form(""),
     archivo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
-    # Subir imagen a Google Drive con tolerancia a fallos
+    # Intentar subir la foto a Drive
     drive_url = ""
     if archivo and archivo.filename:
         try:
@@ -55,19 +56,24 @@ async def registrar_frutal(
             print(f"Error al subir a Google Drive: {e}")
             drive_url = ""
 
-    # Creación del registro sin campos inexistentes
+    # Como imagen_drive_url es nullable=False en models.py, asignamos un valor por defecto si falla Drive
+    if not drive_url:
+        drive_url = "Sin imagen disponible"
+
+    # Mapeo exacto a las columnas del modelo RegistroFrutal
     nuevo_registro = RegistroFrutal(
         especie_variedad=especie_variedad,
         lote_sector=lote_sector,
         fecha_siembra=fecha_siembra,
         edad_meses=edad_meses,
-        etapa_fenologica=etapa_fenologica,
         tipo_riego=tipo_riego,
-        estado_fitosanitario=estado_fitosanitario,
         control_plagas=control_plagas,
         manejo_general=manejo_general,
+        etapa_fenologica=etapa_fenologica,
+        estado_fitosanitario=estado_fitosanitario,
         coordenadas=coordenadas,
-        drive_url=drive_url
+        observaciones=observaciones,
+        imagen_drive_url=drive_url
     )
     
     db.add(nuevo_registro)
@@ -76,12 +82,12 @@ async def registrar_frutal(
 
     return JSONResponse(content={
         "status": "success",
-        "mensaje": "Expediente guardado",
+        "mensaje": "Expediente guardado exitosamente",
         "id": nuevo_registro.id,
         "drive_url": drive_url
     })
 
-# Descarga directa GeoJSON para QGIS y ArcGIS Pro
+# Exportación directa GeoJSON para QGIS y ArcGIS Pro
 @app.get("/export/geojson")
 def export_geojson(db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).all()
@@ -103,7 +109,7 @@ def export_geojson(db: Session = Depends(get_db)):
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [lon, lat]  # Estándar GeoJSON: [Longitud, Latitud]
+                "coordinates": [lon, lat]  # GeoJSON estándar: [Longitud, Latitud]
             },
             "properties": {
                 "id": r.id,
@@ -111,12 +117,14 @@ def export_geojson(db: Session = Depends(get_db)):
                 "lote_sector": getattr(r, "lote_sector", "N/A"),
                 "fecha_siembra": str(getattr(r, "fecha_siembra", "")),
                 "edad_meses": getattr(r, "edad_meses", None),
-                "etapa_fenologica": getattr(r, "etapa_fenologica", "N/A"),
                 "tipo_riego": getattr(r, "tipo_riego", "N/A"),
+                "etapa_fenologica": getattr(r, "etapa_fenologica", "N/A"),
                 "estado_fitosanitario": getattr(r, "estado_fitosanitario", "N/A"),
                 "control_plagas": getattr(r, "control_plagas", ""),
                 "manejo_general": getattr(r, "manejo_general", ""),
-                "drive_url": getattr(r, "drive_url", "")
+                "observaciones": getattr(r, "observaciones", ""),
+                "fecha_registro": str(getattr(r, "fecha_registro", "")),
+                "imagen_url": getattr(r, "imagen_drive_url", "")
             }
         }
         features.append(feature)
