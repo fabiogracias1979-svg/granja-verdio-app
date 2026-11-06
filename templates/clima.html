@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Clima y Pluviometría - Granja Verdio</title>
+  <style>
+    body { font-family: sans-serif; background-color: #f0f4f1; padding: 20px; }
+    .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+    h2 { color: #235334; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input, select, textarea { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+    button { background-color: #2e7d32; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    button:hover { background-color: #1b5e20; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+    th { background-color: #e8f5e9; color: #235334; }
+    .nav-btn { display: inline-block; margin-bottom: 20px; text-decoration: none; color: #2e7d32; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <a href="/" class="nav-btn">⬅ Volver al Menú Principal</a>
+  <h2>🌤️ Registro Climático y Pluviometría</h2>
+
+  <form id="formClima">
+    <div class="form-group">
+      <label>Fecha de Medición:</label>
+      <input type="date" name="fecha_medicion" required>
+    </div>
+    <div class="form-group">
+      <label>Precipitación (mm):</label>
+      <input type="number" step="0.1" name="precipitacion_mm">
+    </div>
+    <div class="form-group">
+      <label>Temperatura Mínima (°C):</label>
+      <input type="number" step="0.1" name="temperatura_min">
+    </div>
+    <div class="form-group">
+      <label>Temperatura Máxima (°C):</label>
+      <input type="number" step="0.1" name="temperatura_max">
+    </div>
+    <div class="form-group">
+      <label>Eventos Extremos:</label>
+      <input type="text" name="eventos_extremos" placeholder="Ej: Fuerte viento, granizo">
+    </div>
+    <button type="submit">Guardar Registro</button>
+  </form>
+
+  <h3 style="margin-top:40px; color:#235334;">Historial de Registros</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Lluvia (mm)</th>
+        <th>Temp (Min-Max)</th>
+        <th>Eventos Extremos</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in registros %}
+      <tr>
+        <td>{{ item.fecha_medicion.strftime('%Y-%m-%d') }}</td>
+        <td>{{ item.precipitacion_mm or '0' }} mm</td>
+        <td>{{ item.temperatura_min or '-' }}°C / {{ item.temperatura_max or '-' }}°C</td>
+        <td>{{ item.eventos_extremos }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4" style="text-align:center;">No hay registros climáticos aún.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+document.getElementById('formClima').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const response = await fetch('/api/registro-clima/', {
+    method: 'POST',
+    body: formData
+  });
+  const data = await response.json();
+  if(data.status === 'success') {
+    alert('Registro guardado');
+    location.reload();
+  }
+});
+</script>
+
+</body>
+</html>
