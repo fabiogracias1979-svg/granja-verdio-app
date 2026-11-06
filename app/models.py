@@ -1,4 +1,4 @@
-﻿from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+﻿from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float
 from datetime import datetime
 from .database import Base
 
@@ -67,8 +67,6 @@ class BitacoraManejo(Base):
     observaciones = Column(Text, nullable=True)
 
 
-
-
 # ==========================================
 #      MÓDULO DE INFRAESTRUCTURA Y RECURSOS
 # ==========================================
@@ -97,4 +95,20 @@ class RegistroAgua(Base):
     fecha_registro = Column(DateTime, nullable=False)
     tipo_movimiento = Column(String(50), nullable=False)    # Ej: Recarga (Lluvia), Recarga (Pozo), Consumo (Riego Bancales)
     volumen_litros = Column(Integer, nullable=True)         # Cantidad de agua que entra o sale
+    observaciones = Column(Text, nullable=True)
+
+# ==========================================
+#      MÓDULO DE CLIMA Y PLUVIOMETRÍA
+# ==========================================
+
+class RegistroClima(Base):
+    __tablename__ = "registro_clima"
+
+    id = Column(Integer, primary_key=True, index=True)
+    fecha_medicion = Column(DateTime, nullable=False)
+    precipitacion_mm = Column(Float, nullable=True)       # Milímetros de lluvia (Pluviómetro)
+    temperatura_min = Column(Float, nullable=True)        # °C
+    temperatura_max = Column(Float, nullable=True)        # °C
+    humedad_relativa = Column(Float, nullable=True)       # Porcentaje
+    eventos_extremos = Column(String(100), nullable=True) # Ej: Tormenta, Ola de calor, Granizo
     observaciones = Column(Text, nullable=True)
