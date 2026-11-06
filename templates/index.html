@@ -5,11 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Granja Verdio - Inicio</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f7f6; padding: 20px; max-width: 600px; margin: auto; text-align: center; }
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f4f7f6; 
+            padding: 20px; 
+            max-width: 600px; 
+            margin: auto; 
+            text-align: center; 
+        }
         h1 { color: #2e7d32; }
-        .menu-container { display: grid; gap: 15px; margin-top: 30px; }
-        .menu-btn { background-color: #2e7d32; color: white; padding: 15px; border-radius: 8px; text-decoration: none; font-size: 18px; font-weight: bold; display: block; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .menu-btn:hover { background-color: #1b5e20; }
+        .menu-container { 
+            display: grid; 
+            gap: 15px; 
+            margin-top: 30px; 
+        }
+        .menu-btn { 
+            background-color: #2e7d32; 
+            color: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            text-decoration: none; 
+            font-size: 18px; 
+            font-weight: bold; 
+            display: block; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+            transition: background-color 0.2s ease;
+        }
+        .menu-btn:hover { 
+            background-color: #1b5e20; 
+        }
+        .menu-btn-config {
+            background-color: #1e5235;
+        }
+        .menu-btn-config:hover {
+            background-color: #143824;
+        }
     </style>
 </head>
 <body>
@@ -22,7 +52,8 @@
         <a href="/casa-malla" class="menu-btn">🍅 Gestión Casa Malla</a>
         <a href="/tablero-casa-malla" class="menu-btn">📊 Tablero Casa Malla</a>
         <a href="/infraestructura" class="menu-btn">🏗️ Infraestructura y Agua</a>
+        <a href="/clima" class="menu-btn">🌤️ Clima y Pluviometría</a>
+        <a href="/configuracion" class="menu-btn menu-btn-config">⚙️ Configuración (Equipo e Insumos)</a>
     </div>
 </body>
 </html>
-<a href="/clima" class="btn">🌤️ Clima y Pluviometría</a>
