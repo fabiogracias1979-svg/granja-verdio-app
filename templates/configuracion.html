@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración - Granja Verdio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800">
+
+    <header class="bg-emerald-800 text-white shadow-md">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-seedling text-2xl text-emerald-300"></i>
+                <h1 class="text-xl font-bold tracking-tight">Granja Verdio | Administración</h1>
+            </div>
+            <nav class="flex items-center gap-3">
+                <a href="/formulario-frutales" class="text-sm bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg transition">
+                    <i class="fa-solid fa-pen-to-square mr-1"></i> Formulario
+                </a>
+                <a href="/registros" class="text-sm bg-emerald-700 hover:bg-emerald-600 px-3 py-2 rounded-lg transition">
+                    <i class="fa-solid fa-table-list mr-1"></i> Catálogo
+                </a>
+                <a href="/configuracion" class="text-sm bg-white text-emerald-900 font-semibold px-3 py-2 rounded-lg shadow-sm">
+                    <i class="fa-solid fa-sliders mr-1"></i> Configuración
+                </a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-8 space-y-10">
+
+        <!-- SECCIÓN: OPERADORES -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="mb-6 border-b border-slate-100 pb-4">
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-users-gear text-emerald-600"></i> Equipo y Operadores de Campo
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">Registra al personal que aplica labores o monitoreos para trazabilidad de turnos.</p>
+            </div>
+
+            <form action="/api/configuracion/operadores" method="POST" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nombre Completo</label>
+                    <input type="text" name="nombre" required placeholder="Ej: Boris Funes" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Rol / Cargo</label>
+                    <select name="rol" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="Agrónomo / Especialista SIG">Agrónomo / Especialista SIG</option>
+                        <option value="Encargado de Campo">Encargado de Campo</option>
+                        <option value="Cuadrilla de Manejo">Cuadrilla de Manejo</option>
+                        <option value="Cosechador">Cosechador</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-user-plus"></i> Agregar Operador
+                    </button>
+                </div>
+            </form>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-600 border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 uppercase text-xs font-semibold">
+                        <tr>
+                            <th class="py-3 px-4 rounded-l-lg">Nombre</th>
+                            <th class="py-3 px-4">Rol</th>
+                            <th class="py-3 px-4">Estado</th>
+                            <th class="py-3 px-4 text-center rounded-r-lg">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for op in operadores %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-semibold text-slate-900">{{ op.nombre }}</td>
+                            <td class="py-3 px-4">{{ op.rol }}</td>
+                            <td class="py-3 px-4">
+                                {% if op.activo %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Activo</span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-600">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <form action="/api/configuracion/operadores/{{ op.id }}/toggle" method="POST">
+                                    <button type="submit" class="text-xs px-3 py-1 rounded-md border transition {% if op.activo %}border-amber-400 text-amber-700 hover:bg-amber-50{% else %}border-emerald-500 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                                        {% if op.activo %}Desactivar{% else %}Activar{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="py-6 text-center text-slate-400">No hay operadores registrados aún.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- SECCIÓN: INSUMOS ORGÁNICOS -->
+        <section class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+            <div class="mb-6 border-b border-slate-100 pb-4">
+                <h2 class="text-xl font-bold text-slate-900 flex items-center gap-2">
+                    <i class="fa-solid fa-flask-vial text-emerald-600"></i> Insumos Orgánicos y Periodos de Carencia
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">Configura insumos y los días obligatorios de espera para cosechar de forma segura (Semáforo de Carencia).</p>
+            </div>
+
+            <form action="/api/configuracion/insumos" method="POST" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Nombre Insumo</label>
+                    <input type="text" name="nombre" required placeholder="Ej: Caldo Sulfocálcico" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Categoría</label>
+                    <select name="categoria" class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                        <option value="Fitosanitario (Caldos/Extractos)">Fitosanitario (Caldos/Extractos)</option>
+                        <option value="Biofertilizante / Abono">Biofertilizante / Abono</option>
+                        <option value="Enmienda de Suelo">Enmienda de Suelo</option>
+                        <option value="Desinfectante">Desinfectante</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Días Carencia (Espera)</label>
+                    <input type="number" name="dias_carencia" min="0" value="0" required class="w-full px-3 py-2 text-sm rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500" placeholder="0 = Sin espera">
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-sm py-2 px-4 rounded-lg transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-plus"></i> Guardar Insumo
+                    </button>
+                </div>
+            </form>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm text-slate-600 border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 uppercase text-xs font-semibold">
+                        <tr>
+                            <th class="py-3 px-4 rounded-l-lg">Insumo</th>
+                            <th class="py-3 px-4">Categoría</th>
+                            <th class="py-3 px-4">Días de Carencia</th>
+                            <th class="py-3 px-4">Estado</th>
+                            <th class="py-3 px-4 text-center rounded-r-lg">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        {% for ins in insumos %}
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 font-semibold text-slate-900">{{ ins.nombre }}</td>
+                            <td class="py-3 px-4">{{ ins.categoria }}</td>
+                            <td class="py-3 px-4 font-medium">
+                                {% if ins.dias_carencia > 0 %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-800">
+                                        <i class="fa-solid fa-clock mr-1"></i> {{ ins.dias_carencia }} días
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-800">
+                                        0 días (Inmediato)
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% if ins.activo %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">Activo</span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-200 text-slate-600">Inactivo</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-center">
+                                <form action="/api/configuracion/insumos/{{ ins.id }}/toggle" method="POST">
+                                    <button type="submit" class="text-xs px-3 py-1 rounded-md border transition {% if ins.activo %}border-amber-400 text-amber-700 hover:bg-amber-50{% else %}border-emerald-500 text-emerald-700 hover:bg-emerald-50{% endif %}">
+                                        {% if ins.activo %}Desactivar{% else %}Activar{% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="5" class="py-6 text-center text-slate-400">No hay insumos registrados aún.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+</body>
+</html>
