@@ -7,7 +7,7 @@ from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
-from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla, BitacoraManejo, Infraestructura, RegistroAgua
+from .models import RegistroFrutal, CatalogoCultivo, RegistroCasaMalla, BitacoraManejo, Infraestructura, RegistroAgua, RegistroClima
 from .drive_service import upload_file_to_drive
 
 # Crea las tablas si no existen
@@ -362,3 +362,45 @@ def registrar_agua(
     db.commit()
     
     return {"status": "success", "mensaje": "Movimiento de agua registrado correctamente."}
+
+# ==========================================
+#      MÓDULO DE CLIMA Y PLUVIOMETRÍA
+# ==========================================
+
+@app.get("/clima", response_class=HTMLResponse)
+def ver_clima(request: Request, db: Session = Depends(get_db)):
+    registros = db.query(RegistroClima).order_by(RegistroClima.fecha_medicion.desc()).all()
+    return templates.TemplateResponse(
+        request=request, 
+        name="clima.html", 
+        context={"registros": registros}
+    )
+
+@app.post("/api/registro-clima/")
+def registrar_clima(
+    fecha_medicion: str = Form(...),
+    precipitacion_mm: float = Form(None),
+    temperatura_min: float = Form(None),
+    temperatura_max: float = Form(None),
+    humedad_relativa: float = Form(None),
+    eventos_extremos: str = Form(""),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    fecha_dt = datetime.strptime(fecha_medicion, "%Y-%m-%d")
+    
+    nuevo_registro = RegistroClima(
+        fecha_medicion=fecha_dt,
+        precipitacion_mm=precipitacion_mm,
+        temperatura_min=temperatura_min,
+        temperatura_max=temperatura_max,
+        humedad_relativa=humedad_relativa,
+        eventos_extremos=eventos_extremos,
+        observaciones=observaciones
+    )
+    
+    db.add(nuevo_registro)
+    db.commit()
+    db.refresh(nuevo_registro)
+    
+    return {"status": "success", "mensaje": "Datos climáticos registrados correctamente."}
