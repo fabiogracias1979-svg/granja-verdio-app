@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 
 <html lang="es">
 
@@ -234,9 +234,9 @@
 
     <div class="field">
 
-      <label>Fotografía de campo *</label>
+      <label>Fotografía de campo (Opcional)</label>
 
-      <input type="file" name="archivo" accept="image/*" capture="environment" required>
+      <input type="file" name="archivo" accept="image/*" capture="environment">
 
     </div>
 
@@ -290,21 +290,59 @@
 
       const resp = await fetch('/api/registro-frutal/', { method: 'POST', body: new FormData(e.target) });
 
+      
+
+      // First check if the response is JSON
+
+      const contentType = resp.headers.get("content-type");
+
+      if (!contentType || !contentType.includes("application/json")) {
+
+        throw new Error("El servidor devolvió un error interno o no devolvió JSON.");
+
+      }
+
+      
+
       const data = await resp.json();
 
-      if (resp.ok) {
+      
+
+      if (resp.ok && data.status === 'success') {
 
         alerta.className = 'success';
 
-        alerta.innerHTML = `✅ <b>Expediente guardado</b><br><a href="${data.drive_url}" target="_blank" style="color: #1b5e20;">Ver foto en Drive</a>`;
+        
 
-        alerta.style.display = 'block'; e.target.reset();
+        let enlaceDrive = '';
 
-      } else throw new Error(data.detail);
+        if (data.drive_url && data.drive_url !== 'Sin imagen disponible') {
+
+             enlaceDrive = `<br><a href="${data.drive_url}" target="_blank" style="color: #2e7d32;">Ver foto en Drive</a>`;
+
+        }
+
+        
+
+        alerta.innerHTML = `✅ <b>Expediente guardado</b>${enlaceDrive}`;
+
+        alerta.style.display = 'block'; 
+
+        e.target.reset();
+
+      } else {
+
+        throw new Error(data.detail || data.mensaje || "Error desconocido al guardar.");
+
+      }
 
     } catch (err) {
 
-      alerta.className = 'error'; alerta.innerText = `❌ Error: ${err.message}`; alerta.style.display = 'block';
+      alerta.className = 'error'; 
+
+      alerta.innerText = `❌ Error: ${err.message}`; 
+
+      alerta.style.display = 'block';
 
     } finally {
 
@@ -321,3 +359,4 @@
 </body>
 
 </html> 
+
