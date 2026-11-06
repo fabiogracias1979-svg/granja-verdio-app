@@ -16,6 +16,17 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Gestión de Granja Verdio")
 templates = Jinja2Templates(directory="templates")
 
+# Función auxiliar para extraer el enlace si Drive devuelve una tupla
+def normalizar_url_drive(resultado):
+    if not resultado:
+        return "Sin imagen disponible"
+    if isinstance(resultado, (tuple, list)):
+        for elemento in resultado:
+            if isinstance(elemento, str) and elemento.startswith("http"):
+                return elemento
+        return str(resultado[0])
+    return str(resultado)
+
 # ==========================================
 #               VISTAS WEB
 # ==========================================
@@ -94,10 +105,12 @@ async def registrar_frutal(
     drive_url = ""
     if archivo and archivo.filename:
         try:
-            drive_url = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+            res = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+            drive_url = normalizar_url_drive(res)
         except Exception as e:
             print(f"Error al subir a Google Drive: {e}")
-    if not drive_url:
+            drive_url = "Sin imagen disponible"
+    else:
         drive_url = "Sin imagen disponible"
 
     nuevo_registro = RegistroFrutal(
@@ -315,9 +328,13 @@ async def registrar_infraestructura(
     drive_url = ""
     if archivo and archivo.filename:
         try:
-            drive_url = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+            res = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+            drive_url = normalizar_url_drive(res)
         except Exception as e:
             print(f"Error al subir a Google Drive: {e}")
+            drive_url = "Sin imagen disponible"
+    else:
+        drive_url = "Sin imagen disponible"
             
     nueva_obra = Infraestructura(
         nombre_obra=nombre_obra,
