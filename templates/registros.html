@@ -50,7 +50,7 @@
   <div class="actions-panel">
     <div class="filters">
       <label><b>Condición:</b></label>
-      <select id="filtroCondicion" onchange="cargarDatos()">
+      <select id="filtroCondicion" onchange="filtrarTabla()">
         <option value="Todos">Todos</option>
         <option value="Óptimo / Sano">Óptimo / Sano</option>
         <option value="Presencia leve de plaga">Presencia leve de plaga</option>
@@ -76,51 +76,57 @@
           <th>Fenología</th>
           <th>Condición</th>
           <th>Coordenadas</th>
-          <th>Fecha</th>
+          <th>Fecha Siembra</th>
           <th>Fotografía</th>
         </tr>
       </thead>
       <tbody id="tablaCuerpo">
-        <tr><td colspan="8" style="text-align:center; padding: 25px; color: #777;">Cargando registros...</td></tr>
+        {% for item in registros %}
+        <tr class="fila-registro" data-estado="{{ item.estado_fitosanitario }}">
+          <td><b>#{{ item.id }}</b></td>
+          <td><b>{{ item.especie_variedad }}</b></td>
+          <td>{{ item.lote_sector }}</td>
+          <td>{{ item.etapa_fenologica }}</td>
+          <td>
+            <span class="badge 
+              {% if 'severo' in item.estado_fitosanitario %}badge-peligro
+              {% elif 'leve' in item.estado_fitosanitario or 'Deficiencia' in item.estado_fitosanitario %}badge-alerta
+              {% else %}badge-sano{% endif %}">
+              {{ item.estado_fitosanitario }}
+            </span>
+          </td>
+          <td><code>{{ item.coordenadas if item.coordenadas else 'Sin GPS' }}</code></td>
+          <td>{{ item.fecha_siembra }}</td>
+          <td>
+            {% if item.imagen_drive_url and item.imagen_drive_url != 'Sin imagen disponible' %}
+              <a href="{{ item.imagen_drive_url }}" target="_blank" class="link-drive">🔍 Ver en Drive</a>
+            {% else %}
+              Sin imagen
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="8" style="text-align:center; padding: 25px; color: #777;">No hay árboles registrados.</td></tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
 <script>
-  async function cargarDatos() {
-    const estado = document.getElementById('filtroCondicion').value;
-    const res = await fetch(`/api/registros?filtro_estado=${encodeURIComponent(estado)}`);
-    const items = await res.json();
-    const tbody = document.getElementById('tablaCuerpo');
-    tbody.innerHTML = '';
-
-    if (items.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 25px; color: #777;">No hay árboles registrados con ese criterio.</td></tr>';
-      return;
-    }
-
-    items.forEach(item => {
-      let badgeClass = 'badge-sano';
-      if (item.estado_fitosanitario.includes('severo')) badgeClass = 'badge-peligro';
-      else if (item.estado_fitosanitario.includes('leve') || item.estado_fitosanitario.includes('Deficiencia')) badgeClass = 'badge-alerta';
-
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><b>#${item.id}</b></td>
-        <td><b>${item.especie_variedad}</b></td>
-        <td>${item.lote_sector}</td>
-        <td>${item.etapa_fenologica}</td>
-        <td><span class="badge ${badgeClass}">${item.estado_fitosanitario}</span></td>
-        <td><code>${item.coordenadas || 'Sin GPS'}</code></td>
-        <td>${item.fecha}</td>
-        <td><a href="${item.imagen_drive_url}" target="_blank" class="link-drive">🔍 Ver en Drive</a></td>
-      `;
-      tbody.appendChild(tr);
+  function filtrarTabla() {
+    const estadoFiltro = document.getElementById('filtroCondicion').value;
+    const filas = document.querySelectorAll('.fila-registro');
+    
+    filas.forEach(fila => {
+      const estadoFila = fila.getAttribute('data-estado');
+      if (estadoFiltro === 'Todos' || estadoFila.includes(estadoFiltro.split(' ')[0])) {
+        fila.style.display = '';
+      } else {
+        fila.style.display = 'none';
+      }
     });
   }
-
-  window.onload = cargarDatos;
 </script>
 
 </body>
