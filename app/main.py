@@ -14,13 +14,11 @@ from .models import (
 )
 from .drive_service import upload_file_to_drive
 
-# Crea las tablas si no existen
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gestión de Granja Verdio")
 templates = Jinja2Templates(directory="templates")
 
-# Función auxiliar para extraer el enlace si Drive devuelve una tupla
 def normalizar_url_drive(resultado):
     if not resultado:
         return "Sin imagen disponible"
@@ -85,7 +83,6 @@ def ver_tablero_casa_malla(request: Request, db: Session = Depends(get_db)):
 def ver_infraestructura(request: Request):
     return templates.TemplateResponse(request=request, name="infraestructura.html")
 
-
 # ==========================================
 #           MÓDULO DE FRUTALES
 # ==========================================
@@ -142,7 +139,6 @@ async def registrar_frutal(
         "drive_url": drive_url
     })
 
-# Exportación GeoJSON
 @app.get("/exportar/geojson")
 @app.get("/export/geojson")
 def export_geojson(db: Session = Depends(get_db)):
@@ -192,12 +188,10 @@ def export_geojson(db: Session = Depends(get_db)):
         headers={"Content-Disposition": "attachment; filename=granja_verdio_datos.geojson"}
     )
 
-# Exportación Excel
 @app.get("/exportar/excel")
 @app.get("/export/excel")
 def export_excel(db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).all()
-    
     data = []
     for r in registros:
         data.append({
@@ -222,9 +216,7 @@ def export_excel(db: Session = Depends(get_db)):
         df.to_excel(writer, index=False, sheet_name='Frutales')
     output.seek(0)
 
-    headers = {
-        'Content-Disposition': 'attachment; filename="granja_verdio_frutales.xlsx"'
-    }
+    headers = {'Content-Disposition': 'attachment; filename="granja_verdio_frutales.xlsx"'}
     return StreamingResponse(
         output,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -349,11 +341,9 @@ async def registrar_infraestructura(
         coordenadas=coordenadas,
         imagen_drive_url=drive_url
     )
-    
     db.add(nueva_obra)
     db.commit()
     db.refresh(nueva_obra)
-    
     return JSONResponse(content={"status": "success", "mensaje": f"{nombre_obra} registrada exitosamente", "id": nueva_obra.id})
 
 @app.post("/api/registro-agua/")
@@ -370,7 +360,6 @@ def registrar_agua(
         raise HTTPException(status_code=404, detail="La infraestructura especificada no existe.")
         
     fecha_dt = datetime.strptime(fecha_registro, "%Y-%m-%d")
-    
     nuevo_movimiento = RegistroAgua(
         infraestructura_id=infraestructura_id,
         fecha_registro=fecha_dt,
@@ -378,10 +367,8 @@ def registrar_agua(
         volumen_litros=volumen_litros,
         observaciones=observaciones
     )
-    
     db.add(nuevo_movimiento)
     db.commit()
-    
     return {"status": "success", "mensaje": "Movimiento de agua registrado correctamente."}
 
 # ==========================================
@@ -409,7 +396,6 @@ def registrar_clima(
     db: Session = Depends(get_db)
 ):
     fecha_dt = datetime.strptime(fecha_medicion, "%Y-%m-%d")
-    
     nuevo_registro = RegistroClima(
         fecha_medicion=fecha_dt,
         precipitacion_mm=precipitacion_mm,
@@ -419,11 +405,9 @@ def registrar_clima(
         eventos_extremos=eventos_extremos,
         observaciones=observaciones
     )
-    
     db.add(nuevo_registro)
     db.commit()
     db.refresh(nuevo_registro)
-    
     return {"status": "success", "mensaje": "Datos climáticos registrados correctamente."}
 
 # ==========================================
