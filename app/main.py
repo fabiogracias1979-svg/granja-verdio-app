@@ -1,6 +1,7 @@
 import json
 import io
 import pandas as pd
+import qrcode
 from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, Depends, Request, HTTPException, Query, Response, status
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, RedirectResponse
@@ -229,6 +230,48 @@ def export_excel(db: Session = Depends(get_db)):
         output,
         media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         headers=headers
+    )
+
+# ==========================================
+#        MÓDULO DE CÓDIGOS QR Y PLACAS
+# ==========================================
+
+@app.get("/qr/frutal/{frutal_id}")
+def generar_qr_frutal(frutal_id: int, request: Request, db: Session = Depends(get_db)):
+    frutal = db.query(RegistroFrutal).filter(RegistroFrutal.id == frutal_id).first()
+    if not frutal:
+        raise HTTPException(status_code=404, detail="Frutal no encontrado")
+
+    base_url = str(request.base_url).rstrip("/")
+    destino_url = f"{base_url}/escanear/{frutal.id}"
+
+    qr = qrcode.QRCode(
+        version=1,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=3,
+    )
+    qr.add_data(destino_url)
+    qr.make(fit=True)
+
+    img = qr.make_image(fill_color="#1e5235", back_color="white")
+
+    buffer = io.BytesIO()
+    img.save(buffer, format="PNG")
+    buffer.seek(0)
+
+    return StreamingResponse(buffer, media_type="image/png")
+
+@app.get("/placa/frutal/{frutal_id}", response_class=HTMLResponse)
+def ver_placa_imprimible(frutal_id: int, request: Request, db: Session = Depends(get_db)):
+    frutal = db.query(RegistroFrutal).filter(RegistroFrutal.id == frutal_id).first()
+    if not frutal:
+        raise HTTPException(status_code=404, detail="Frutal no encontrado")
+        
+    return templates.TemplateResponse(
+        request=request,
+        name="placa_qr.html",
+        context={"frutal": frutal}
     )
 
 # ==========================================
