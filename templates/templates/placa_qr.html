@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Placa QR - Árbol #{{ frutal.id }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            body { background: white !important; padding: 0 !important; }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="mb-4 no-print flex gap-3">
+        <button onclick="window.print()" class="bg-emerald-700 hover:bg-emerald-800 text-white font-semibold py-2 px-5 rounded-lg shadow-md transition flex items-center gap-2">
+            <i class="fa-solid fa-print"></i> Imprimir Placa
+        </button>
+        <a href="/registros" class="bg-slate-600 hover:bg-slate-700 text-white font-semibold py-2 px-4 rounded-lg shadow-md transition">
+            Volver a Registros
+        </a>
+    </div>
+
+    <div class="bg-white border-2 border-emerald-800 rounded-2xl shadow-xl p-6 max-w-sm w-full text-center space-y-4">
+        
+        <div class="border-b border-emerald-100 pb-3">
+            <div class="flex items-center justify-center gap-2 text-emerald-800 font-bold text-lg uppercase tracking-wide">
+                <i class="fa-solid fa-seedling text-emerald-600"></i> Granja Verdio
+            </div>
+            <p class="text-xs text-slate-500 font-medium">Identificación Agronómica de Campo</p>
+        </div>
+
+        <div class="bg-emerald-50 rounded-xl p-3">
+            <h2 class="text-xl font-extrabold text-slate-900">{{ frutal.especie_variedad }}</h2>
+            <p class="text-sm font-semibold text-emerald-800">Lote: {{ frutal.lote_sector }}</p>
+            <span class="inline-block mt-1 text-xs bg-emerald-200 text-emerald-900 px-2.5 py-0.5 rounded-full font-mono font-bold">
+                ID Árbol: #{{ frutal.id }}
+            </span>
+        </div>
+
+        <div class="flex justify-center p-2 bg-white rounded-lg border border-slate-200">
+            <img src="/qr/frutal/{{ frutal.id }}" alt="QR Árbol {{ frutal.id }}" class="w-48 h-48 object-contain">
+        </div>
+
+        <div class="text-xs text-slate-500 space-y-1">
+            {% if frutal.coordenadas %}
+                <p><i class="fa-solid fa-location-dot text-emerald-700"></i> Coordenadas: <span class="font-mono text-slate-700">{{ frutal.coordenadas }}</span></p>
+            {% endif %}
+            <p class="italic text-[11px] text-slate-400">Escanee este código para consultar el semáforo de carencia o registrar labores en campo.</p>
+        </div>
+
+    </div>
+
+</body>
+</html>
