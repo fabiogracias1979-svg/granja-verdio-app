@@ -134,6 +134,6 @@ class RiegoCampo(Base):
     fecha_aplicacion = Column(DateTime)
     volumen_litros = Column(Float)
     frutal_id = Column(Integer, ForeignKey("registro_frutal.id"), nullable=True)
-    casa_malla_id = Column(Integer, ForeignKey("registro_casa_malla.id"), nullable=True)
+    casa_malla_id = Column(Integer, ForeignKey("registro_casa_mallas.id"), nullable=True)
     operador_id = Column(Integer, ForeignKey("operador.id"), nullable=True)
     observaciones = Column(String, nullable=True)
