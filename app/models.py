@@ -127,3 +127,13 @@ class InsumoOrganico(Base):
     dias_carencia = Column(Integer, default=0)
     dosis_recomendada = Column(String(100), nullable=True)
     activo = Column(Boolean, default=True)
+
+class RiegoCampo(Base):
+    __tablename__ = "riego_campo"
+    id = Column(Integer, primary_key=True, index=True)
+    fecha_aplicacion = Column(DateTime)
+    volumen_litros = Column(Float)
+    frutal_id = Column(Integer, ForeignKey("registro_frutal.id"), nullable=True)
+    casa_malla_id = Column(Integer, ForeignKey("registro_casa_malla.id"), nullable=True)
+    operador_id = Column(Integer, ForeignKey("operador.id"), nullable=True)
+    observaciones = Column(String, nullable=True)
