@@ -41,7 +41,6 @@ def ver_inicio(request: Request):
 
 @app.get("/formulario-frutales", response_class=HTMLResponse)
 def ver_formulario_frutales(request: Request, db: Session = Depends(get_db)):
-    # NUEVO: Enviamos la lista de operadores activos al formulario
     operadores = db.query(Operador).filter(Operador.activo == True).all()
     return templates.TemplateResponse(
         request=request, 
@@ -102,7 +101,7 @@ def ver_infraestructura(request: Request):
 
 @app.post("/api/registro-frutal/")
 async def registrar_frutal(
-    operador_id: int = Form(...), # NUEVO: Recibe quién está registrando
+    operador_id: int = Form(...),
     especie_variedad: str = Form(...),
     lote_sector: str = Form(...),
     fecha_siembra: str = Form(None),
@@ -129,7 +128,7 @@ async def registrar_frutal(
         drive_url = "Sin imagen disponible"
 
     nuevo_registro = RegistroFrutal(
-        operador_id=operador_id, # NUEVO: Lo guarda en la base de datos
+        operador_id=operador_id,
         especie_variedad=especie_variedad,
         lote_sector=lote_sector,
         fecha_siembra=fecha_siembra,
@@ -178,6 +177,4 @@ def export_geojson(db: Session = Depends(get_db)):
                 "especie_variedad": getattr(r, "especie_variedad", "N/A"),
                 "lote_sector": getattr(r, "lote_sector", "N/A"),
                 "fecha_siembra": str(getattr(r, "fecha_siembra", "")),
-                "edad_meses": getattr(r, "edad_meses", None),
-                "tipo_riego": getattr(r, "tipo_riego", "N/A"),
-                "etapa_fenologica": getattr(r, "etapa_fen
+                "edad_meses": getattr(r, "edad
