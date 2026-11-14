@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Placa QR - {{ frutal.especie_variedad }}</title>
+    <style>
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center; 
+            min-height: 100vh; background-color: #e2e8f0; margin: 0; padding: 20px;
+        }
+        .tarjeta-placa { 
+            background: white; border: 6px solid #166534; border-radius: 16px; 
+            padding: 30px; width: 100%; max-width: 350px; text-align: center; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); 
+        }
+        .header-placa { margin-bottom: 20px; border-bottom: 2px dashed #cbd5e1; padding-bottom: 15px; }
+        .id-badge { 
+            background: #dcfce7; color: #166534; padding: 6px 12px; 
+            border-radius: 8px; font-weight: 900; font-size: 1.2rem; 
+            display: inline-block; margin-bottom: 10px; border: 2px solid #166534;
+        }
+        h1 { color: #14532d; margin: 0; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
+        .detalles { margin: 15px 0; text-align: left; background: #f8fafc; padding: 15px; border-radius: 8px; }
+        .detalles p { margin: 5px 0; color: #334155; font-size: 15px; }
+        .detalles strong { color: #0f172a; }
+        
+        .qr-container { margin: 25px 0; display: flex; justify-content: center; }
+        /* Aquí llamamos a la ruta de Python que genera el QR */
+        .qr-container img { width: 220px; height: 220px; border-radius: 8px; }
+        
+        .instruccion { font-size: 13px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;}
+        
+        .btn-imprimir {
+            margin-top: 25px; padding: 12px 24px; background: #2563eb; color: white; 
+            font-weight: bold; border: none; border-radius: 8px; cursor: pointer; 
+            font-size: 16px; box-shadow: 0 4px 6px rgba(37, 99, 235, 0.2);
+            transition: background 0.3s;
+        }
+        .btn-imprimir:hover { background: #1d4ed8; }
+
+        /* Reglas especiales para cuando se presione Ctrl+P o Imprimir */
+        @media print {
+            body { background: white; display: block; padding: 0; }
+            .tarjeta-placa { 
+                box-shadow: none; border: 4px solid #000; max-width: 100%; margin: 0 auto; 
+                page-break-inside: avoid;
+            }
+            .id-badge { border-color: #000; color: #000; }
+            h1, .detalles strong, .detalles p { color: #000; }
+            .btn-imprimir { display: none; } /* Oculta el botón al imprimir */
+        }
+    </style>
+</head>
+<body>
+
+    <div class="tarjeta-placa">
+        <div class="header-placa">
+            <div class="id-badge">ÁRBOL #{{ frutal.id }}</div>
+            <h1>{{ frutal.especie_variedad }}</h1>
+        </div>
+        
+        <div class="detalles">
+            <p><strong>Sector:</strong> {{ frutal.lote_sector }}</p>
+            <p><strong>Siembra:</strong> {{ frutal.fecha_siembra or 'No registrada' }}</p>
+            <p><strong>Coordenadas:</strong> {{ frutal.coordenadas or 'N/A' }}</p>
+        </div>
+        
+        <div class="qr-container">
+            <!-- La imagen carga el QR generado al vuelo por FastAPI -->
+            <img src="/qr/frutal/{{ frutal.id }}" alt="Código QR para escaneo">
+        </div>
+        
+        <p class="instruccion">Escanea para control en campo</p>
+    </div>
+
+    <button class="btn-imprimir" onclick="window.print()">🖨️ Imprimir Placa</button>
+
+</body>
+</html>
