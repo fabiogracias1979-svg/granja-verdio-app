@@ -6,6 +6,7 @@ class RegistroFrutal(Base):
     __tablename__ = "registros_frutales"
 
     id = Column(Integer, primary_key=True, index=True)
+    operador_id = Column(Integer, ForeignKey("catalogo_operadores.id"), nullable=True) # <-- ESTA LÍNEA ES NUEVA
     especie_variedad = Column(String(100), nullable=False)
     lote_sector = Column(String(100), nullable=False)
     fecha_siembra = Column(String(50), nullable=True)
@@ -135,7 +136,4 @@ class RiegoCampo(Base):
     id = Column(Integer, primary_key=True, index=True)
     fecha_aplicacion = Column(DateTime)
     volumen_litros = Column(Float)
-    frutal_id = Column(Integer, ForeignKey("registros_frutales.id"), nullable=True) # <-- Ojo aquí, lleva "s" en registros
-    casa_malla_id = Column(Integer, ForeignKey("registros_casa_malla.id"), nullable=True)
-    operador_id = Column(Integer, ForeignKey("catalogo_operadores.id"), nullable=True)
-    observaciones = Column(String, nullable=True)
+    frutal_id = Column(Integer, ForeignKey("registros_frutales.id"), nullable=True)
