@@ -11,7 +11,7 @@ from .database import engine, Base, get_db
 from .models import (
     RegistroFrutal, CatalogoCultivo, RegistroCasaMalla,
     BitacoraManejo, Infraestructura, RegistroAgua,
-    RegistroClima, Operador, InsumoOrganico
+    RegistroClima, Operador, InsumoOrganico, RiegoCampo
 )
 from .drive_service import upload_file_to_drive
 
@@ -47,6 +47,12 @@ def ver_formulario_frutales(request: Request):
 @app.get("/registros", response_class=HTMLResponse)
 def ver_registros(request: Request, db: Session = Depends(get_db)):
     registros = db.query(RegistroFrutal).order_by(RegistroFrutal.id.desc()).all()
+    
+    # NUEVO: Buscar el último riego de cada árbol para mostrarlo en la tabla
+    for r in registros:
+        ultimo = db.query(RiegoCampo).filter(RiegoCampo.frutal_id == r.id).order_by(RiegoCampo.fecha_aplicacion.desc()).first()
+        r.ultimo_riego = ultimo
+
     return templates.TemplateResponse(
         request=request, 
         name="registros.html", 
@@ -262,6 +268,14 @@ def generar_qr_frutal(frutal_id: int, request: Request, db: Session = Depends(ge
 
     return StreamingResponse(buffer, media_type="image/png")
 
+@app.get("/placa/frutal", response_class=HTMLResponse)
+@app.get("/placa/frutal/", response_class=HTMLResponse)
+def redirigir_placa_por_defecto(db: Session = Depends(get_db)):
+    primer_frutal = db.query(RegistroFrutal).order_by(RegistroFrutal.id.asc()).first()
+    if primer_frutal:
+        return RedirectResponse(url=f"/placa/frutal/{primer_frutal.id}", status_code=status.HTTP_303_SEE_OTHER)
+    return HTMLResponse("<h3>Aún no hay frutales registrados en el sistema.</h3>", status_code=404)
+
 @app.get("/placa/frutal/{frutal_id}", response_class=HTMLResponse)
 def ver_placa_imprimible(frutal_id: int, request: Request, db: Session = Depends(get_db)):
     frutal = db.query(RegistroFrutal).filter(RegistroFrutal.id == frutal_id).first()
@@ -273,6 +287,50 @@ def ver_placa_imprimible(frutal_id: int, request: Request, db: Session = Depends
         name="placa_qr.html",
         context={"frutal": frutal}
     )
+
+# ==========================================
+#        MÓDULO DE ESCANEO MÓVIL Y CAMPO
+# ==========================================
+
+@app.get("/escanear/{frutal_id}", response_class=HTMLResponse)
+def vista_escanear_movil(frutal_id: int, request: Request, db: Session = Depends(get_db)):
+    frutal = db.query(RegistroFrutal).filter(RegistroFrutal.id == frutal_id).first()
+    if not frutal:
+        raise HTTPException(status_code=404, detail="Frutal no encontrado")
+    
+    operadores = db.query(Operador).filter(Operador.activo == True).all()
+    riegos = db.query(RiegoCampo).filter(RiegoCampo.frutal_id == frutal_id).order_by(RiegoCampo.fecha_aplicacion.desc()).limit(5).all()
+
+    return templates.TemplateResponse(
+        request=request,
+        name="escaner_movil.html",
+        context={
+            "frutal": frutal,
+            "operadores": operadores,
+            "riegos": riegos
+        }
+    )
+
+@app.post("/api/riego-campo/")
+def registrar_riego_campo(
+    frutal_id: int = Form(None),
+    operador_id: int = Form(...),
+    volumen_litros: float = Form(...),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    nuevo_riego = RiegoCampo(
+        fecha_aplicacion=datetime.utcnow(),
+        volumen_litros=volumen_litros,
+        frutal_id=frutal_id,
+        operador_id=operador_id,
+        observaciones=observaciones
+    )
+    db.add(nuevo_riego)
+    db.commit()
+    
+    return RedirectResponse(url=f"/escanear/{frutal_id}", status_code=status.HTTP_303_SEE_OTHER)
+
 
 # ==========================================
 #        MÓDULO DE CASA MALLA
