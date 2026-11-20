@@ -17,6 +17,7 @@ if "sqlite" in SQLALCHEMY_DATABASE_URL:
         SQLALCHEMY_DATABASE_URL, 
         connect_args={"check_same_thread": False}
     )
+    print("⚠️ ATENCIÓN: La aplicación está usando SQLite (Base temporal). Algo falló con PostgreSQL.")
 else:
     # Configuración optimizada para PostgreSQL en la nube (Render)
     engine = create_engine(
@@ -25,6 +26,7 @@ else:
         pool_recycle=300,    # Recicla conexiones cada 5 minutos para evitar caídas
         pool_timeout=30
     )
+    print("✅ ÉXITO: La aplicación está conectada a PostgreSQL en la nube.")
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
