@@ -1,35 +1,35 @@
-﻿import os
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 
-# Lee la URL de Neon o usa SQLite en local si no existe
+# 1. Leer la variable de entorno de Render, o usar SQLite local como respaldo
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./granja.db")
 
-# Asegura el uso explícito del driver psycopg2
+# 2. Render entrega la URL como "postgres://", pero SQLAlchemy requiere "postgresql://"
 if SQLALCHEMY_DATABASE_URL.startswith("postgres://"):
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql+psycopg2://", 1)
-elif SQLALCHEMY_DATABASE_URL.startswith("postgresql://") and not SQLALCHEMY_DATABASE_URL.startswith("postgresql+psycopg2://"):
-    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgresql://", "postgresql+psycopg2://", 1)
+    SQLALCHEMY_DATABASE_URL = SQLALCHEMY_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-# SQLite requiere connect_args; PostgreSQL requiere pool_pre_ping y pool_recycle para conexiones remotas estables
+# 3. Configuración del motor de base de datos
 if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    # Configuración para base de datos local
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL, 
         connect_args={"check_same_thread": False}
     )
 else:
+    # Configuración optimizada para PostgreSQL en la nube (Render)
     engine = create_engine(
         SQLALCHEMY_DATABASE_URL,
-        pool_pre_ping=True,  # Verifica activamente si la conexión SSL sigue viva antes de ejecutar la consulta
-        pool_recycle=300,    # Recicla las conexiones cada 5 minutos para evitar timeouts de Neon/Render
+        pool_pre_ping=True,  # Verifica si la conexión sigue activa
+        pool_recycle=300,    # Recicla conexiones cada 5 minutos para evitar caídas
         pool_timeout=30
     )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
 Base = declarative_base()
 
+# Función para inyectar la sesión en las rutas de FastAPI
 def get_db():
     db = SessionLocal()
     try:
