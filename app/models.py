@@ -1,41 +1,51 @@
-﻿from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, Boolean, Date
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from .database import Base
 
-class RegistroFrutal(Base):
-    __tablename__ = "registros_frutales"
+# ==========================================
+#      NUEVA ARQUITECTURA: FRUTALES (FASE 2)
+# ==========================================
+
+# 1. El Padrón Estático (Pestaña 1 del Excel)
+class CatalogoFrutal(Base):
+    __tablename__ = "catalogo_frutales"
 
     id = Column(Integer, primary_key=True, index=True)
-    operador_id = Column(Integer, ForeignKey("catalogo_operadores.id"), nullable=True) # <-- ESTA LÍNEA ES NUEVA
     especie_variedad = Column(String(100), nullable=False)
     lote_sector = Column(String(100), nullable=False)
-    fecha_siembra = Column(String(50), nullable=True)
-    edad_meses = Column(Integer, nullable=True)
-    tipo_riego = Column(String(100), nullable=True)
-    control_plagas = Column(Text, nullable=True)
-    manejo_general = Column(Text, nullable=True)
-    etapa_fenologica = Column(String(100), nullable=True)
-    estado_fitosanitario = Column(String(100), nullable=True)
     coordenadas = Column(String(100), nullable=True)
-    observaciones = Column(Text, nullable=True)
-    fecha_registro = Column(DateTime, default=datetime.utcnow)
-    imagen_drive_url = Column(String(500), nullable=False)
+    fecha_siembra = Column(String(50), nullable=True)
+    registrado_por = Column(String(100), nullable=True)
+    
+    # Relación SIG: Un árbol tiene muchas actividades
+    actividades = relationship("BitacoraFrutal", back_populates="arbol")
 
+# 2. El Historial de Vida (Pestaña 2 del Excel)
+class BitacoraFrutal(Base):
+    __tablename__ = "bitacora_frutales"
 
-# 1. Catálogo de especies para la Casa Malla
+    id = Column(Integer, primary_key=True, index=True)
+    arbol_id = Column(Integer, ForeignKey("catalogo_frutales.id"), nullable=False)
+    fecha = Column(String(50), nullable=False)
+    tipo_actividad = Column(String(100), nullable=False)
+    descripcion = Column(Text, nullable=True)
+    enlace_foto = Column(String(500), nullable=True)
+    
+    arbol = relationship("CatalogoFrutal", back_populates="actividades")
+
+# ==========================================
+#   MÓDULOS EXISTENTES (CASA MALLA, INFRAESTRUCTURA, ETC.)
+# ==========================================
 class CatalogoCultivo(Base):
     __tablename__ = "catalogo_cultivos"
-
     id = Column(Integer, primary_key=True, index=True)
     especie_variedad = Column(String(100), nullable=False)
     dias_a_trasplante = Column(Integer, nullable=False)
     dias_a_cosecha = Column(Integer, nullable=False)
 
-
-# 2. Registro operativo de cada cama/bancal
 class RegistroCasaMalla(Base):
     __tablename__ = "registros_casa_malla"
-
     id = Column(Integer, primary_key=True, index=True)
     identificador_cama = Column(String(50), nullable=False)
     cultivo_id = Column(Integer, ForeignKey("catalogo_cultivos.id"))
@@ -46,11 +56,8 @@ class RegistroCasaMalla(Base):
     estado = Column(String(50), default="Semillero")
     observaciones = Column(Text, nullable=True)
 
-
-# 3. Bitácora de manejo e insumos para la Casa Malla
 class BitacoraManejo(Base):
     __tablename__ = "bitacora_manejo"
-
     id = Column(Integer, primary_key=True, index=True)
     casa_malla_id = Column(Integer, ForeignKey("registros_casa_malla.id"))
     fecha_aplicacion = Column(DateTime, nullable=False)
@@ -59,14 +66,8 @@ class BitacoraManejo(Base):
     motivo = Column(String(100), nullable=True)
     observaciones = Column(Text, nullable=True)
 
-
-# ==========================================
-#      MÓDULO DE INFRAESTRUCTURA Y RECURSOS
-# ==========================================
-
 class Infraestructura(Base):
     __tablename__ = "infraestructura"
-
     id = Column(Integer, primary_key=True, index=True)
     nombre_obra = Column(String(100), nullable=False)
     categoria = Column(String(100), nullable=False)
@@ -77,10 +78,8 @@ class Infraestructura(Base):
     imagen_drive_url = Column(String(500), nullable=True)
     fecha_registro = Column(DateTime, default=datetime.utcnow)
 
-
 class RegistroAgua(Base):
     __tablename__ = "registro_agua"
-
     id = Column(Integer, primary_key=True, index=True)
     infraestructura_id = Column(Integer, ForeignKey("infraestructura.id"))
     fecha_registro = Column(DateTime, nullable=False)
@@ -88,14 +87,8 @@ class RegistroAgua(Base):
     volumen_litros = Column(Integer, nullable=True)
     observaciones = Column(Text, nullable=True)
 
-
-# ==========================================
-#      MÓDULO DE CLIMA Y PLUVIOMETRÍA
-# ==========================================
-
 class RegistroClima(Base):
     __tablename__ = "registro_clima"
-
     id = Column(Integer, primary_key=True, index=True)
     fecha_medicion = Column(DateTime, nullable=False)
     precipitacion_mm = Column(Float, nullable=True)
@@ -105,23 +98,15 @@ class RegistroClima(Base):
     eventos_extremos = Column(String(100), nullable=True)
     observaciones = Column(Text, nullable=True)
 
-
-# ==========================================
-#   CONFIGURACIÓN DINÁMICA: OPERADORES E INSUMOS
-# ==========================================
-
 class Operador(Base):
     __tablename__ = "catalogo_operadores"
-
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), unique=True, nullable=False)
     rol = Column(String(60), default="Técnico de Campo")
     activo = Column(Boolean, default=True)
 
-
 class InsumoOrganico(Base):
     __tablename__ = "catalogo_insumos"
-
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(120), unique=True, nullable=False)
     categoria = Column(String(50), nullable=False)
@@ -129,11 +114,10 @@ class InsumoOrganico(Base):
     dosis_recomendada = Column(String(100), nullable=True)
     activo = Column(Boolean, default=True)
 
-
 class RiegoCampo(Base):
     __tablename__ = "riego_campo"
-    
     id = Column(Integer, primary_key=True, index=True)
     fecha_aplicacion = Column(DateTime)
     volumen_litros = Column(Float)
-    frutal_id = Column(Integer, ForeignKey("registros_frutales.id"), nullable=True)
+    # Temporalmente vinculado al catálogo nuevo
+    frutal_id = Column(Integer, ForeignKey("catalogo_frutales.id"), nullable=True)﻿
