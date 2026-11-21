@@ -6,31 +6,48 @@
   <title>Catálogo de Monitoreo - Granja Verdio</title>
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: #f0f4f1; margin: 0; padding: 20px; }
+    body { background-color: #f0f4f1; margin: 0; padding: 16px; }
     .container { max-width: 1200px; margin: 0 auto; }
-    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-    h2 { color: #235334; margin: 0; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
+    h2 { color: #235334; margin: 0; font-size: 1.4rem; }
+    .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .nav-btn {
-      text-decoration: none; font-weight: bold; font-size: 0.95rem; color: #2e7d32; padding: 9px 16px; border-radius: 8px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+      text-decoration: none; font-weight: bold; font-size: 0.9rem; color: #2e7d32; padding: 9px 14px; border-radius: 8px; background: white; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: none; cursor: pointer;
     }
+    .status-pill {
+      padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .status-online { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
+    .status-offline { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+    
+    /* Banner de sincronización pendiente */
+    .sync-banner {
+      background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; display: none; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+    }
+    .btn-sync {
+      background: #1565c0; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.88rem;
+    }
+    .btn-sync:hover { background: #0d47a1; }
+
     .actions-panel {
-      background: white; border-radius: 10px; padding: 18px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      background: white; border-radius: 10px; padding: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
-    .filters { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
-    select { padding: 8px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.9rem; }
-    .export-btns { display: flex; gap: 10px; }
+    .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    select, input[type="text"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
+    .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn-exp {
-      background: #2e7d32; color: white; border: none; padding: 9px 15px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 6px;
+      background: #2e7d32; color: white; border: none; padding: 9px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;
     }
     .btn-exp.geojson { background: #0277bd; }
     .btn-exp:hover { opacity: 0.9; }
+    
     .table-container { background: white; border-radius: 10px; overflow-x: auto; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
-    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.9rem; }
-    th { background: #e8f5e9; color: #235334; padding: 12px 14px; font-weight: 600; border-bottom: 2px solid #c8e6c9; }
-    td { padding: 12px 14px; border-bottom: 1px solid #edf2ee; vertical-align: middle; }
+    table { width: 100%; border-collapse: collapse; text-align: left; font-size: 0.88rem; }
+    th { background: #e8f5e9; color: #235334; padding: 12px 12px; font-weight: 600; border-bottom: 2px solid #c8e6c9; white-space: nowrap; }
+    td { padding: 11px 12px; border-bottom: 1px solid #edf2ee; vertical-align: middle; }
     tr:hover { background: #fafdfa; }
     .badge {
-      display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.78rem; font-weight: bold;
+      display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.76rem; font-weight: bold;
     }
     .badge-sano { background: #e8f5e9; color: #1b5e20; }
     .badge-alerta { background: #fff3e0; color: #e65100; }
@@ -38,13 +55,31 @@
     .link-drive { color: #1565c0; text-decoration: none; font-weight: 600; }
     .link-drive:hover { text-decoration: underline; }
     
-    /* Estilos para los nuevos botones */
     .btn-qr {
-      display: inline-block; background: #e8f5e9; color: #1b5e20; text-decoration: none; font-size: 0.8rem; font-weight: bold; padding: 5px 10px; border-radius: 6px; border: 1px solid #c8e6c9; transition: all 0.2s;
+      display: inline-block; background: #e8f5e9; color: #1b5e20; text-decoration: none; font-size: 0.78rem; font-weight: bold; padding: 5px 9px; border-radius: 6px; border: 1px solid #c8e6c9;
     }
-    .btn-qr:hover { background: #c8e6c9; }
-    .riego-text { color: #0277bd; font-weight: bold; }
-    .riego-fecha { font-size: 0.75rem; color: #777; display: block; margin-top: 2px; }
+    .btn-humedad {
+      display: inline-block; background: #e1f5fe; color: #0277bd; border: 1px solid #b3e5fc; font-size: 0.8rem; font-weight: bold; padding: 6px 10px; border-radius: 6px; cursor: pointer;
+    }
+    .btn-humedad:hover { background: #b3e5fc; }
+    .riego-text { color: #0277bd; font-weight: bold; display: block; }
+    .riego-fecha { font-size: 0.75rem; color: #666; display: block; }
+    .humedad-tag { font-size: 0.78rem; color: #2e7d32; font-weight: 600; display: block; margin-top: 3px; }
+
+    /* Modal para chequeo de humedad en campo */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 16px;
+    }
+    .modal-box {
+      background: white; border-radius: 12px; max-width: 420px; width: 100%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-box h3 { margin-top: 0; color: #235334; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 6px; font-size: 0.88rem; color: #333; }
+    .form-group select, .form-group textarea { width: 100%; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+    .btn-cancel { background: #eee; color: #333; border: none; padding: 9px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-save { background: #2e7d32; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -52,25 +87,37 @@
 <div class="container">
   <div class="header-bar">
     <h2>📊 Monitoreo y Catálogo de Frutales</h2>
-    <a href="/" class="nav-btn">➕ Nuevo Registro</a>
+    <div class="header-actions">
+      <span id="badgeConexion" class="status-pill status-online">🟢 En línea (Sincronizado)</span>
+      <a href="/" class="nav-btn">➕ Inicio</a>
+    </div>
+  </div>
+
+  <!-- Banner de datos guardados offline listos para subir -->
+  <div id="syncBanner" class="sync-banner">
+    <div>
+      <b>📲 Tienes <span id="contadorPendientes">0</span> chequeos de humedad guardados en el teléfono.</b>
+      <div style="font-size: 0.82rem; margin-top: 2px;">Cuando tengas conexión a internet, presiona sincronizar para guardarlos en la base de datos.</div>
+    </div>
+    <button class="btn-sync" onclick="sincronizarAhora()">☁️ Sincronizar ahora</button>
   </div>
 
   <div class="actions-panel">
     <div class="filters">
-      <label><b>Condición:</b></label>
+      <label><b>Buscar / Filtrar:</b></label>
+      <input type="text" id="buscadorTexto" onkeyup="filtrarTabla()" placeholder="Ej. Mango, #4, Coco...">
       <select id="filtroCondicion" onchange="filtrarTabla()">
-        <option value="Todos">Todos</option>
-        <option value="Óptimo / Sano">Óptimo / Sano</option>
-        <option value="Presencia leve de plaga">Presencia leve de plaga</option>
-        <option value="Ataque severo (manejo urgente)">Ataque severo</option>
-        <option value="Deficiencia nutricional">Deficiencia nutricional</option>
-        <option value="Estrés hídrico">Estrés hídrico</option>
+        <option value="Todos">Todos los estados</option>
+        <option value="Óptimo">Óptimo / Sano</option>
+        <option value="plaga">Presencia de plaga</option>
+        <option value="Deficiencia">Deficiencia nutricional</option>
+        <option value="hídrico">Estrés hídrico</option>
       </select>
     </div>
 
     <div class="export-btns">
-      <a href="/exportar/geojson" class="btn-exp geojson">🗺️ Descargar GeoJSON (QGIS/ArcGIS)</a>
-      <a href="/exportar/excel" class="btn-exp">📗 Descargar Excel</a>
+      <a href="/exportar/geojson" class="btn-exp geojson">🗺️ GeoJSON</a>
+      <a href="/exportar/excel" class="btn-exp">📗 Excel</a>
     </div>
   </div>
 
@@ -82,74 +129,219 @@
           <th>Variedad</th>
           <th>Sector</th>
           <th>Fenología</th>
-          <th>Condición</th>
+          <th>Último Riego / Humedad</th>
+          <th>Chequeo Campo</th>
           <th>Coordenadas</th>
-          <th>Fecha Siembra</th>
           <th>Fotografía</th>
-          <!-- Nuevas columnas -->
           <th>Placa QR</th>
-          <th>Último Riego</th>
         </tr>
       </thead>
       <tbody id="tablaCuerpo">
         {% for item in registros %}
-        <tr class="fila-registro" data-estado="{{ item.estado_fitosanitario }}">
+        <tr class="fila-registro" data-id="{{ item.id }}" data-estado="{{ item.estado_fitosanitario or 'Óptimo / Sano' }}">
           <td><b>#{{ item.id }}</b></td>
-          <td><b>{{ item.especie_variedad }}</b></td>
+          <td><b>{{ item.especie_variedad }}</b><br><span style="font-size:0.75rem; color:#777;">Siembra: {{ item.fecha_siembra }}</span></td>
           <td>{{ item.lote_sector }}</td>
-          <td>{{ item.etapa_fenologica }}</td>
+          <td><span class="badge badge-sano">{{ item.etapa_fenologica }}</span></td>
+          <td id="celda-estado-{{ item.id }}">
+            {% if item.ultimo_riego %}
+              <span class="riego-text">💧 {{ item.ultimo_riego.detalle }}</span>
+              <span class="riego-fecha">Fecha: {{ item.ultimo_riego.fecha }}</span>
+            {% else %}
+              <span style="font-size: 0.8rem; color: #999;">Sin riego previo</span>
+            {% endif %}
+            {% if item.ultima_humedad %}
+              <span class="humedad-tag">🌱 {{ item.ultima_humedad }}</span>
+            {% endif %}
+          </td>
           <td>
-            <span class="badge 
-              {% if 'severo' in item.estado_fitosanitario %}badge-peligro
-              {% elif 'leve' in item.estado_fitosanitario or 'Deficiencia' in item.estado_fitosanitario %}badge-alerta
-              {% else %}badge-sano{% endif %}">
-              {{ item.estado_fitosanitario }}
-            </span>
+            <button class="btn-humedad" onclick="abrirModalHumedad({{ item.id }}, '{{ item.especie_variedad }}')">💧 Chequear Humedad</button>
           </td>
           <td><code>{{ item.coordenadas if item.coordenadas else 'Sin GPS' }}</code></td>
-          <td>{{ item.fecha_siembra }}</td>
           <td>
             {% if item.imagen_drive_url and item.imagen_drive_url != 'Sin imagen disponible' %}
               <a href="{{ item.imagen_drive_url }}" target="_blank" class="link-drive">🔍 Ver Drive</a>
             {% else %}
-              <span style="color: #999; font-size: 0.85rem;">Sin imagen</span>
+              <span style="color: #999; font-size: 0.82rem;">Sin imagen</span>
             {% endif %}
           </td>
-          
-          <!-- Nuevas celdas para QR y Riego -->
           <td>
-            <a href="/placa/frutal/{{ item.id }}" target="_blank" class="btn-qr">🔲 Ver Placa</a>
+            <a href="/placa/frutal/{{ item.id }}" target="_blank" class="btn-qr">🔲 QR</a>
           </td>
-          <td>
-            {% if item.ultimo_riego %}
-                <span class="riego-text">💧 {{ item.ultimo_riego.volumen_litros }} L</span>
-                <span class="riego-fecha">{{ item.ultimo_riego.fecha_aplicacion.strftime('%d/%m/%Y') }}</span>
-            {% else %}
-                <span style="font-size: 0.8rem; color: #aaa; font-style: italic;">Sin riegos</span>
-            {% endif %}
-          </td>
-
         </tr>
         {% else %}
-        <tr><td colspan="10" style="text-align:center; padding: 25px; color: #777;">No hay árboles registrados.</td></tr>
+        <tr><td colspan="9" style="text-align:center; padding: 25px; color: #777;">No hay árboles registrados.</td></tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
 
+<!-- Modal de Registro Rápido de Humedad (Funciona 100% Offline) -->
+<div id="modalHumedad" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modalTitulo">💧 Chequeo de Humedad</h3>
+    <input type="hidden" id="modalArbolId">
+    
+    <div class="form-group">
+      <label>Estado de humedad del suelo tras riego:</label>
+      <select id="modalNivelHumedad">
+        <option value="Humedad Óptima (Suelo fresco y reteniendo)">🟢 Humedad Óptima (Suelo fresco)</option>
+        <option value="Ligeramente Seco (Requiere riego en 24-48h)">🟡 Ligeramente Seco (Monitorear)</option>
+        <option value="Seco / Estrés Hídrico (Requiere riego urgente)">🔴 Seco (Requiere riego urgente)</option>
+        <option value="Saturado / Encharcado (Revisar drenaje)">🔵 Saturado / Encharcado</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Observaciones de campo (opcional):</label>
+      <textarea id="modalNota" rows="2" placeholder="Ej. Mulch conservando bien la humedad en la base..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn-save" onclick="guardarChequeoHumedad()">💾 Guardar Chequeo</button>
+    </div>
+  </div>
+</div>
+
 <script>
+  const STORAGE_KEY_PENDIENTES = 'verdio_chequeos_pendientes';
+  const STORAGE_KEY_CACHE_HTML = 'verdio_tabla_cache';
+
+  // 1. Guardar copia de la tabla en el navegador cada vez que carga con internet
+  window.addEventListener('DOMContentLoaded', () => {
+    const tbody = document.getElementById('tablaCuerpo');
+    if (tbody && tbody.children.length > 0 && !tbody.innerText.includes('No hay árboles registrados')) {
+      localStorage.setItem(STORAGE_KEY_CACHE_HTML, tbody.innerHTML);
+    } else if (localStorage.getItem(STORAGE_KEY_CACHE_HTML)) {
+      tbody.innerHTML = localStorage.getItem(STORAGE_KEY_CACHE_HTML);
+    }
+    actualizarEstadoRed();
+    renderizarPendientesLocales();
+  });
+
+  window.addEventListener('online', () => {
+    actualizarEstadoRed();
+    sincronizarAhora(); // Intenta sincronizar automáticamente al recuperar señal
+  });
+  window.addEventListener('offline', actualizarEstadoRed);
+
+  function actualizarEstadoRed() {
+    const badge = document.getElementById('badgeConexion');
+    if (navigator.onLine) {
+      badge.className = 'status-pill status-online';
+      badge.innerHTML = '🟢 En línea (Caché Offline listo)';
+    } else {
+      badge.className = 'status-pill status-offline';
+      badge.innerHTML = '🟠 Modo Offline (Guardando en teléfono)';
+    }
+  }
+
+  function abrirModalHumedad(id, especie) {
+    document.getElementById('modalArbolId').value = id;
+    document.getElementById('modalTitulo').innerText = `💧 Árbol #${id} - ${especie}`;
+    document.getElementById('modalNota').value = '';
+    document.getElementById('modalHumedad').style.display = 'flex';
+  }
+
+  function cerrarModal() {
+    document.getElementById('modalHumedad').style.display = 'none';
+  }
+
+  function guardarChequeoHumedad() {
+    const arbolId = parseInt(document.getElementById('modalArbolId').value);
+    const nivel = document.getElementById('modalNivelHumedad').value;
+    const nota = document.getElementById('modalNota').value.trim();
+    const hoy = new Date().toISOString().split('T')[0];
+
+    const descripcionCompleta = nota ? `${nivel} | Nota: ${nota}` : nivel;
+
+    const nuevoRegistro = {
+      arbol_id: arbolId,
+      fecha: hoy,
+      tipo_actividad: "Chequeo de Humedad",
+      descripcion: descripcionCompleta
+    };
+
+    // Guardar en cola local del teléfono
+    const pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDIENTES) || '[]');
+    pendientes.push(nuevoRegistro);
+    localStorage.setItem(STORAGE_KEY_PENDIENTES, JSON.stringify(pendientes));
+
+    cerrarModal();
+    renderizarPendientesLocales();
+
+    // Si hay internet en ese momento, sincronizar de inmediato
+    if (navigator.onLine) {
+      sincronizarAhora();
+    } else {
+      alert(`✅ Guardado en la memoria del teléfono (Árbol #${arbolId}). Se subirá a la nube cuando tengas señal.`);
+    }
+  }
+
+  function renderizarPendientesLocales() {
+    const pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDIENTES) || '[]');
+    const banner = document.getElementById('syncBanner');
+    const contador = document.getElementById('contadorPendientes');
+
+    if (pendientes.length > 0) {
+      banner.style.display = 'flex';
+      contador.innerText = pendientes.length;
+
+      // Mostrar visualmente en la tabla los registros pendientes del teléfono
+      pendientes.forEach(p => {
+        const celda = document.getElementById(`celda-estado-${p.arbol_id}`);
+        if (celda && !celda.innerHTML.includes('Pendiente de subir')) {
+          celda.innerHTML += `<span class="humedad-tag" style="color:#e65100;">⏳ Pendiente: ${p.descripcion}</span>`;
+        }
+      });
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
+  async function sincronizarAhora() {
+    const pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDIENTES) || '[]');
+    if (pendientes.length === 0) return;
+
+    if (!navigator.onLine) {
+      alert("⚠️ Aún no tienes conexión a internet. Tus datos siguen seguros en el teléfono.");
+      return;
+    }
+
+    try {
+      const resp = await fetch('/api/sincronizar-offline', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registros: pendientes })
+      });
+
+      if (resp.ok) {
+        localStorage.removeItem(STORAGE_KEY_PENDIENTES);
+        alert(`☁️ ¡Sincronización exitosa! Se guardaron ${pendientes.length} registros en PostgreSQL.`);
+        window.location.reload();
+      } else {
+        alert("❌ Hubo un problema al sincronizar con el servidor. Intenta de nuevo en unos segundos.");
+      }
+    } catch (e) {
+      alert("⚠️ Error de red al intentar subir los datos. Tus registros siguen guardados localmente.");
+    }
+  }
+
   function filtrarTabla() {
-    const estadoFiltro = document.getElementById('filtroCondicion').value;
+    const texto = document.getElementById('buscadorTexto').value.toLowerCase();
+    const estadoFiltro = document.getElementById('filtroCondicion').value.toLowerCase();
     const filas = document.querySelectorAll('.fila-registro');
     
     filas.forEach(fila => {
-      const estadoFila = fila.getAttribute('data-estado');
-      if (estadoFiltro === 'Todos' || estadoFila.includes(estadoFiltro.split(' ')[0])) {
-        fila.style.display = '';
-      } else {
-        fila.style.display = 'none';
-      }
+      const contenidoFila = fila.innerText.toLowerCase();
+      const estadoFila = (fila.getAttribute('data-estado') || '').toLowerCase();
+      
+      const coincideTexto = contenidoFila.includes(texto);
+      const coincideEstado = estadoFiltro === 'todos' || estadoFila.includes(estadoFiltro);
+
+      fila.style.display = (coincideTexto && coincideEstado) ? '' : 'none';
     });
   }
 </script>
