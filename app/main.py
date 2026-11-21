@@ -461,6 +461,156 @@ async def registrar_infraestructura(
     
     db.add(nueva_obra)
     db.commit()
-    db.refresh(nueva_obra)    
-    return JSONResponse(content={"status": "success", "mensaje": f"{nombre_obra} registrada exitosamente", "
+    db.refresh(nueva_obra)
     
+    return JSONResponse(content={"status": "success", "mensaje": f"{nombre_obra} registrada exitosamente", "id": nueva_obra.id})
+
+@app.post("/api/registro-agua/")
+def registrar_agua(
+    infraestructura_id: int = Form(...),
+    fecha_registro: str = Form(...),
+    tipo_movimiento: str = Form(...),
+    volumen_litros: int = Form(0),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    obra = db.query(Infraestructura).filter(Infraestructura.id == infraestructura_id).first()
+    if not obra:
+        raise HTTPException(status_code=404, detail="La infraestructura especificada no existe.")
+        
+    fecha_dt = datetime.strptime(fecha_registro, "%Y-%m-%d")
+    
+    nuevo_movimiento = RegistroAgua(
+        infraestructura_id=infraestructura_id,
+        fecha_registro=fecha_dt,
+        tipo_movimiento=tipo_movimiento,
+        volumen_litros=volumen_litros,
+        observaciones=observaciones
+    )
+    
+    db.add(nuevo_movimiento)
+    db.commit()
+    
+    return {"status": "success", "mensaje": "Movimiento de agua registrado correctamente."}
+
+# ==========================================
+#      MÓDULO DE CLIMA Y PLUVIOMETRÍA
+# ==========================================
+
+@app.get("/clima", response_class=HTMLResponse)
+def ver_clima(request: Request, db: Session = Depends(get_db)):
+    registros = db.query(RegistroClima).order_by(RegistroClima.fecha_medicion.desc()).all()
+    return templates.TemplateResponse(
+        request=request, 
+        name="clima.html", 
+        context={"registros": registros}
+    )
+
+@app.post("/api/registro-clima/")
+def registrar_clima(
+    fecha_medicion: str = Form(...),
+    precipitacion_mm: float = Form(None),
+    temperatura_min: float = Form(None),
+    temperatura_max: float = Form(None),
+    humedad_relativa: float = Form(None),
+    eventos_extremos: str = Form(""),
+    observaciones: str = Form(""),
+    db: Session = Depends(get_db)
+):
+    fecha_dt = datetime.strptime(fecha_medicion, "%Y-%m-%d")
+    
+    nuevo_registro = RegistroClima(
+        fecha_medicion=fecha_dt,
+        precipitacion_mm=precipitacion_mm,
+        temperatura_min=temperatura_min,
+        temperatura_max=temperatura_max,
+        humedad_relativa=humedad_relativa,
+        eventos_extremos=eventos_extremos,
+        observaciones=observaciones
+    )
+    
+    db.add(nuevo_registro)
+    db.commit()
+    db.refresh(nuevo_registro)
+    
+    return {"status": "success", "mensaje": "Datos climáticos registrados correctamente."}
+
+# ==========================================
+#   CONFIGURACIÓN DINÁMICA: OPERADORES E INSUMOS
+# ==========================================
+
+@app.get("/configuracion", response_class=HTMLResponse)
+@app.get("/configuracion/", response_class=HTMLResponse)
+def vista_configuracion(request: Request, db: Session = Depends(get_db)):
+    operadores = db.query(Operador).order_by(Operador.nombre.asc()).all()
+    insumos = db.query(InsumoOrganico).order_by(InsumoOrganico.nombre.asc()).all()
+    return templates.TemplateResponse(
+        request=request,
+        name="configuracion.html",
+        context={
+            "operadores": operadores,
+            "insumos": insumos
+        }
+    )
+
+@app.post("/api/configuracion/operadores")
+def crear_operador(
+    nombre: str = Form(...),
+    rol: str = Form("Técnico de Campo"),
+    db: Session = Depends(get_db)
+):
+    nombre_limpio = nombre.strip()
+    existe = db.query(Operador).filter(Operador.nombre.ilike(nombre_limpio)).first()
+    if not existe:
+        nuevo_op = Operador(nombre=nombre_limpio, rol=rol, activo=True)
+        db.add(nuevo_op)
+        db.commit()
+    return RedirectResponse(url="/configuracion", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/api/configuracion/operadores/{operador_id}/toggle")
+def toggle_operador(operador_id: int, db: Session = Depends(get_db)):
+    op = db.query(Operador).filter(Operador.id == operador_id).first()
+    if op:
+        op.activo = not op.activo
+        db.commit()
+    return RedirectResponse(url="/configuracion", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/api/configuracion/insumos")
+def crear_insumo(
+    nombre: str = Form(...),
+    categoria: str = Form(...),
+    dias_carencia: int = Form(0),
+    dosis_recomendada: str = Form(None),
+    db: Session = Depends(get_db)
+):
+    nombre_limpio = nombre.strip()
+    existe = db.query(InsumoOrganico).filter(InsumoOrganico.nombre.ilike(nombre_limpio)).first()
+    if not existe:
+        nuevo_ins = InsumoOrganico(
+            nombre=nombre_limpio,
+            categoria=categoria,
+            dias_carencia=dias_carencia,
+            dosis_recomendada=dosis_recomendada,
+            activo=True
+        )
+        db.add(nuevo_ins)
+        db.commit()
+    return RedirectResponse(url="/configuracion", status_code=status.HTTP_303_SEE_OTHER)
+
+@app.post("/api/configuracion/insumos/{insumo_id}/toggle")
+def toggle_insumo(insumo_id: int, db: Session = Depends(get_db)):
+    ins = db.query(InsumoOrganico).filter(InsumoOrganico.id == insumo_id).first()
+    if ins:
+        ins.activo = not ins.activo
+        db.commit()
+    return RedirectResponse(url="/configuracion", status_code=status.HTTP_303_SEE_OTHER)
+
+# ==========================================
+#   ZONA DE PELIGRO: REINICIO DE BASE DE DATOS
+# ==========================================
+
+@app.get("/limpiar-base-de-datos-total")
+def limpiar_bd():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    return {"status": "Éxito", "mensaje": "Base de datos reseteada a CERO. Lista para El Paisnal."}
