@@ -6,6 +6,8 @@ from datetime import datetime, timedelta
 from fastapi import FastAPI, UploadFile, File, Form, Depends, Request, HTTPException, Query, Response, status
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
+from typing import List
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
@@ -21,6 +23,15 @@ Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Gestión de Granja Verdio")
 templates = Jinja2Templates(directory="templates")
+
+class RegistroOfflineItem(BaseModel):
+    arbol_id: int
+    fecha: str
+    tipo_actividad: str
+    descripcion: str
+
+class LoteOffline(BaseModel):
+    registros: List[RegistroOfflineItem]
 
 def normalizar_url_drive(resultado):
     if not resultado:
@@ -51,27 +62,57 @@ def ver_formulario_frutales(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/registros", response_class=HTMLResponse)
 def ver_registros(request: Request, db: Session = Depends(get_db)):
-    # 1. Leer los 22 árboles desde la tabla inyectada catalogo_frutales
     arboles_sql = db.execute(text("SELECT * FROM catalogo_frutales ORDER BY id ASC")).fetchall()
     
     registros = []
     for row in arboles_sql:
         item = dict(row._mapping)
         
-        # 2. Buscar el último evento registrado en bitacora_frutales para este árbol
+        # Último evento general (para foto o actividad reciente)
         ultimo_evento = db.execute(
             text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid ORDER BY fecha DESC LIMIT 1"),
             {"aid": item["id"]}
         ).fetchone()
-        
         evento = dict(ultimo_evento._mapping) if ultimo_evento else {}
         
-        # 3. Adaptar las columnas para que registros.html las muestre sin errores
-        item["etapa_fenologica"] = evento.get("tipo_actividad") or "Sin actividad"
+        # Último evento fenológico (excluyendo riegos/humedad si hay otra etapa registrada)
+        evento_feno = db.execute(
+            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid AND LOWER(tipo_actividad) NOT LIKE '%riego%' AND LOWER(tipo_actividad) NOT LIKE '%humedad%' ORDER BY fecha DESC LIMIT 1"),
+            {"aid": item["id"]}
+        ).fetchone()
+        feno_dict = dict(evento_feno._mapping) if evento_feno else evento
+        
+        # Último riego registrado en bitacora_frutales
+        ultimo_riego_bitacora = db.execute(
+            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid AND LOWER(tipo_actividad) LIKE '%riego%' ORDER BY fecha DESC LIMIT 1"),
+            {"aid": item["id"]}
+        ).fetchone()
+        
+        # Último chequeo de humedad registrado
+        ultimo_chequeo = db.execute(
+            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid AND LOWER(tipo_actividad) LIKE '%humedad%' ORDER BY fecha DESC LIMIT 1"),
+            {"aid": item["id"]}
+        ).fetchone()
+        
+        item["etapa_fenologica"] = feno_dict.get("tipo_actividad") or "Crecimiento Vegetativo"
         item["estado_fitosanitario"] = "Óptimo / Sano"
         item["imagen_drive_url"] = evento.get("enlace_foto") or "Sin imagen disponible"
-        item["ultimo_riego"] = None
         
+        if ultimo_riego_bitacora:
+            r_dict = dict(ultimo_riego_bitacora._mapping)
+            item["ultimo_riego"] = {
+                "detalle": r_dict.get("descripcion") or "Riego aplicado",
+                "fecha": str(r_dict.get("fecha") or "")[:10]
+            }
+        else:
+            item["ultimo_riego"] = None
+
+        if ultimo_chequeo:
+            c_dict = dict(ultimo_chequeo._mapping)
+            item["ultima_humedad"] = f"{c_dict.get('descripcion')} ({str(c_dict.get('fecha') or '')[:10]})"
+        else:
+            item["ultima_humedad"] = None
+            
         registros.append(item)
 
     return templates.TemplateResponse(
@@ -79,6 +120,27 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
         name="registros.html", 
         context={"registros": registros}
     )
+
+@app.post("/api/sincronizar-offline")
+def sincronizar_offline(lote: LoteOffline, db: Session = Depends(get_db)):
+    insertados = 0
+    for item in lote.registros:
+        db.execute(
+            text("""
+                INSERT INTO bitacora_frutales (arbol_id, fecha, tipo_actividad, descripcion, enlace_foto)
+                VALUES (:arbol_id, :fecha, :tipo_actividad, :descripcion, :enlace_foto)
+            """),
+            {
+                "arbol_id": item.arbol_id,
+                "fecha": item.fecha,
+                "tipo_actividad": item.tipo_actividad,
+                "descripcion": item.descripcion,
+                "enlace_foto": "Registro de campo offline"
+            }
+        )
+        insertados += 1
+    db.commit()
+    return {"status": "success", "sincronizados": insertados}
 
 @app.get("/casa-malla", response_class=HTMLResponse)
 def ver_casa_malla(request: Request, db: Session = Depends(get_db)):
