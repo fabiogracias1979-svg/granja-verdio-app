@@ -32,7 +32,7 @@
       background: white; border-radius: 10px; padding: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
     .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    select, input[type="text"], input[type="number"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
+    select, input[type="text"], input[type="number"], input[type="date"], input[type="url"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
     .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn-exp {
       background: #2e7d32; color: white; border: none; padding: 9px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;
@@ -206,7 +206,7 @@
   </div>
 </div>
 
-<!-- MODAL 1: Monitoreo Completo de Campo (Humedad + Riego + Fenología + Muerto/Resiembra) -->
+<!-- MODAL 1: Monitoreo Completo de Campo -->
 <div id="modalCampo" class="modal-overlay">
   <div class="modal-box">
     <h3 id="modalTitulo">📋 Monitoreo de Campo</h3>
@@ -274,7 +274,7 @@
   </div>
 </div>
 
-<!-- MODAL 2: Subir Fotografía Nueva a Google Drive -->
+<!-- MODAL 2: Subir Fotografía Nueva (Con Fecha + Archivo o Enlace Directo Drive) -->
 <div id="modalFoto" class="modal-overlay">
   <div class="modal-box">
     <h3 id="modalFotoTitulo">📸 Vincular Nueva Fotografía</h3>
@@ -282,18 +282,28 @@
       <input type="hidden" id="fotoArbolId" name="arbol_id">
       
       <div class="form-group">
-        <label>Seleccionar o tomar foto:</label>
-        <input type="file" id="fotoArchivo" name="archivo" accept="image/*" required>
+        <label>📅 Fecha en que se tomó la foto:</label>
+        <input type="date" id="fotoFecha" name="fecha_foto" required>
+      </div>
+
+      <div class="form-group">
+        <label>Opción A: Subir archivo desde dispositivo:</label>
+        <input type="file" id="fotoArchivo" name="archivo" accept="image/*">
+      </div>
+
+      <div class="form-group">
+        <label>Opción B: O pegar enlace directo de Google Drive (si ya la subiste):</label>
+        <input type="url" id="fotoUrlExterna" name="url_externa" placeholder="https://drive.google.com/file/d/...">
       </div>
 
       <div class="form-group">
         <label>Descripción / Observación de la foto:</label>
-        <input type="text" id="fotoNota" name="nota_foto" placeholder="Ej. Estado de brotes y acolchado noviembre 2026" required>
+        <input type="text" id="fotoNota" name="nota_foto" placeholder="Ej. Completamente seco, se aplicaron 2 galones al tronco y 1 al tubo" required>
       </div>
 
       <div class="modal-actions">
         <button type="button" class="btn-cancel" onclick="cerrarModalFoto()">Cancelar</button>
-        <button type="submit" id="btnEnviarFoto" class="btn-save">☁️ Subir a Drive</button>
+        <button type="submit" id="btnEnviarFoto" class="btn-save">💾 Guardar Foto</button>
       </div>
     </form>
   </div>
@@ -339,7 +349,6 @@
   <div class="modal-box">
     <h3 id="modalHistorialTitulo">📜 Historial del Árbol</h3>
     <div id="contenedorHistorial" style="max-height: 60vh; overflow-y: auto; padding-right: 4px;">
-      <!-- Se llena dinámicamente con JS -->
     </div>
     <div class="modal-actions">
       <button type="button" class="btn-cancel" onclick="cerrarModalHistorial()">Cerrar</button>
@@ -415,7 +424,6 @@
 
     const pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDIENTES) || '[]');
 
-    // 1. Si cambió estado fenológico / Muerto / Resiembra
     if (nuevaFeno) {
       const descEstado = nota ? `${nuevaFeno} | ${nota}` : `Registro de estado: ${nuevaFeno}`;
       pendientes.push({
@@ -426,7 +434,6 @@
       });
     }
 
-    // 2. Si registró chequeo de humedad
     if (nivel || varillaPlato || varillaTubo) {
       let partesHumedad = [];
       if (nivel) partesHumedad.push(nivel);
@@ -442,7 +449,6 @@
       });
     }
 
-    // 3. Si aplicó riego hoy
     if (galTronco > 0 || galTubo > 0) {
       const totalGal = galTronco + galTubo;
       const descRiego = `${totalGal} galones (${galTronco} gal tronco + ${galTubo} gal tubo)`;
@@ -454,7 +460,6 @@
       });
     }
 
-    // 4. Si solo escribió una nota general sin seleccionar dropdowns
     if (!nuevaFeno && !nivel && galTronco === 0 && galTubo === 0 && nota) {
       pendientes.push({
         arbol_id: arbolId,
@@ -526,12 +531,15 @@
   // --- FUNCIONES MODAL FOTO ---
   function abrirModalFoto(id, especie) {
     if (!navigator.onLine) {
-      alert("⚠️ Para subir fotografías a Google Drive necesitas tener conexión a internet.");
+      alert("⚠️ Para vincular fotografías necesitas tener conexión a internet.");
       return;
     }
+    const hoy = new Date().toISOString().split('T')[0];
     document.getElementById('fotoArbolId').value = id;
+    document.getElementById('fotoFecha').value = hoy;
     document.getElementById('modalFotoTitulo').innerText = `📸 Nueva Foto - Árbol #${id} (${especie})`;
     document.getElementById('fotoArchivo').value = '';
+    document.getElementById('fotoUrlExterna').value = '';
     document.getElementById('fotoNota').value = '';
     document.getElementById('modalFoto').style.display = 'flex';
   }
@@ -542,9 +550,17 @@
 
   async function enviarFotoDrive(e) {
     e.preventDefault();
+    const archivoInput = document.getElementById('fotoArchivo');
+    const urlInput = document.getElementById('fotoUrlExterna').value.trim();
+
+    if (!archivoInput.files.length && !urlInput) {
+      alert("⚠️ Selecciona una imagen de tu dispositivo o pega un enlace de Google Drive.");
+      return;
+    }
+
     const btn = document.getElementById('btnEnviarFoto');
     btn.disabled = true;
-    btn.innerText = "⏳ Subiendo a Drive...";
+    btn.innerText = "⏳ Guardando...";
 
     const formData = new FormData(document.getElementById('formSubirFoto'));
     try {
@@ -554,16 +570,16 @@
       });
       const data = await resp.json();
       if (resp.ok) {
-        alert("✅ ¡Fotografía subida a Google Drive y vinculada al árbol!");
+        alert("✅ ¡Fotografía vinculada correctamente al historial del árbol!");
         window.location.reload();
       } else {
-        alert("❌ Error: " + (data.detail || "No se pudo subir la foto"));
+        alert("❌ Error: " + (data.detail || "No se pudo guardar la foto"));
       }
     } catch (err) {
-      alert("❌ Error de conexión al subir la fotografía.");
+      alert("❌ Error de conexión al guardar la fotografía.");
     } finally {
       btn.disabled = false;
-      btn.innerText = "☁️ Subir a Drive";
+      btn.innerText = "💾 Guardar Foto";
     }
   }
 
