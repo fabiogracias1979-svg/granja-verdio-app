@@ -211,7 +211,6 @@ def sincronizar_offline(lote: LoteOffline, db: Session = Depends(get_db)):
                 "enlace_foto": "Registro de campo offline"
             }
         )
-        # Si el evento es una Resiembra, actualiza también la fecha_siembra en catalogo_frutales
         if "resiembra" in item.tipo_actividad.lower() and "muerto" not in item.tipo_actividad.lower():
             db.execute(
                 text("UPDATE catalogo_frutales SET fecha_siembra = :fecha WHERE id = :aid"),
@@ -224,20 +223,30 @@ def sincronizar_offline(lote: LoteOffline, db: Session = Depends(get_db)):
 @app.post("/api/bitacora-frutal/foto")
 async def subir_foto_bitacora_frutal(
     arbol_id: int = Form(...),
+    fecha_foto: str = Form(None),
     nota_foto: str = Form("Actualización fotográfica de campo"),
-    archivo: UploadFile = File(...),
+    url_externa: str = Form(""),
+    archivo: UploadFile = File(None),
     db: Session = Depends(get_db)
 ):
-    if not archivo or not archivo.filename:
-        raise HTTPException(status_code=400, detail="No se adjuntó ninguna imagen.")
+    drive_url = ""
+    url_limpia = (url_externa or "").strip()
 
-    try:
-        res = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
-        drive_url = normalizar_url_drive(res)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al subir imagen a Google Drive: {str(e)}")
+    if url_limpia.startswith("http"):
+        drive_url = url_limpia
+    elif archivo and archivo.filename:
+        try:
+            res = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+            drive_url = normalizar_url_drive(res)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500, 
+                detail=f"Credenciales de Google Drive vencidas o faltantes ({str(e)}). Usa la opción de pegar el enlace directo de Drive abajo."
+            )
+    else:
+        raise HTTPException(status_code=400, detail="Debes seleccionar una imagen o pegar un enlace válido de Google Drive.")
 
-    hoy = datetime.now().strftime("%Y-%m-%d")
+    fecha_registro = fecha_foto.strip() if (fecha_foto and fecha_foto.strip()) else datetime.now().strftime("%Y-%m-%d")
     db.execute(
         text("""
             INSERT INTO bitacora_frutales (arbol_id, fecha, tipo_actividad, descripcion, enlace_foto)
@@ -245,7 +254,7 @@ async def subir_foto_bitacora_frutal(
         """),
         {
             "arbol_id": arbol_id,
-            "fecha": hoy,
+            "fecha": fecha_registro,
             "tipo_actividad": "Seguimiento Fotográfico",
             "descripcion": nota_foto,
             "enlace_foto": drive_url
