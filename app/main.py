@@ -7,7 +7,7 @@ from fastapi import FastAPI, UploadFile, File, Form, Depends, Request, HTTPExcep
 from fastapi.responses import HTMLResponse, StreamingResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from .database import engine, Base, get_db
@@ -68,35 +68,53 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
     for row in arboles_sql:
         item = dict(row._mapping)
         
-        # Último evento general (para foto o actividad reciente)
-        ultimo_evento = db.execute(
-            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid ORDER BY fecha DESC LIMIT 1"),
+        # Última foto real registrada en bitacora_frutales (ignora registros sin enlace http)
+        ultima_foto = db.execute(
+            text("""
+                SELECT enlace_foto FROM bitacora_frutales 
+                WHERE arbol_id = :aid AND enlace_foto LIKE 'http%' 
+                ORDER BY fecha DESC, id DESC LIMIT 1
+            """),
             {"aid": item["id"]}
         ).fetchone()
-        evento = dict(ultimo_evento._mapping) if ultimo_evento else {}
         
-        # Último evento fenológico (excluyendo riegos/humedad si hay otra etapa registrada)
+        # Último evento fenológico (excluyendo riegos, humedad y fotos)
         evento_feno = db.execute(
-            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid AND LOWER(tipo_actividad) NOT LIKE '%riego%' AND LOWER(tipo_actividad) NOT LIKE '%humedad%' ORDER BY fecha DESC LIMIT 1"),
+            text("""
+                SELECT * FROM bitacora_frutales 
+                WHERE arbol_id = :aid 
+                  AND LOWER(tipo_actividad) NOT LIKE '%riego%' 
+                  AND LOWER(tipo_actividad) NOT LIKE '%humedad%'
+                  AND LOWER(tipo_actividad) NOT LIKE '%foto%'
+                ORDER BY fecha DESC, id DESC LIMIT 1
+            """),
             {"aid": item["id"]}
         ).fetchone()
-        feno_dict = dict(evento_feno._mapping) if evento_feno else evento
+        feno_dict = dict(evento_feno._mapping) if evento_feno else {}
         
         # Último riego registrado en bitacora_frutales
         ultimo_riego_bitacora = db.execute(
-            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid AND LOWER(tipo_actividad) LIKE '%riego%' ORDER BY fecha DESC LIMIT 1"),
+            text("""
+                SELECT * FROM bitacora_frutales 
+                WHERE arbol_id = :aid AND LOWER(tipo_actividad) LIKE '%riego%' 
+                ORDER BY fecha DESC, id DESC LIMIT 1
+            """),
             {"aid": item["id"]}
         ).fetchone()
         
         # Último chequeo de humedad registrado
         ultimo_chequeo = db.execute(
-            text("SELECT * FROM bitacora_frutales WHERE arbol_id = :aid AND LOWER(tipo_actividad) LIKE '%humedad%' ORDER BY fecha DESC LIMIT 1"),
+            text("""
+                SELECT * FROM bitacora_frutales 
+                WHERE arbol_id = :aid AND LOWER(tipo_actividad) LIKE '%humedad%' 
+                ORDER BY fecha DESC, id DESC LIMIT 1
+            """),
             {"aid": item["id"]}
         ).fetchone()
         
         item["etapa_fenologica"] = feno_dict.get("tipo_actividad") or "Crecimiento Vegetativo"
         item["estado_fitosanitario"] = "Óptimo / Sano"
-        item["imagen_drive_url"] = evento.get("enlace_foto") or "Sin imagen disponible"
+        item["imagen_drive_url"] = ultima_foto._mapping["enlace_foto"] if ultima_foto else "Sin imagen disponible"
         
         if ultimo_riego_bitacora:
             r_dict = dict(ultimo_riego_bitacora._mapping)
@@ -141,6 +159,44 @@ def sincronizar_offline(lote: LoteOffline, db: Session = Depends(get_db)):
         insertados += 1
     db.commit()
     return {"status": "success", "sincronizados": insertados}
+
+@app.post("/api/bitacora-frutal/foto")
+async def subir_foto_bitacora_frutal(
+    arbol_id: int = Form(...),
+    nota_foto: str = Form("Actualización fotográfica de campo"),
+    archivo: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    if not archivo or not archivo.filename:
+        raise HTTPException(status_code=400, detail="No se adjuntó ninguna imagen.")
+
+    try:
+        res = upload_file_to_drive(archivo.file, archivo.filename, archivo.content_type)
+        drive_url = normalizar_url_drive(res)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al subir imagen a Google Drive: {str(e)}")
+
+    hoy = datetime.now().strftime("%Y-%m-%d")
+    db.execute(
+        text("""
+            INSERT INTO bitacora_frutales (arbol_id, fecha, tipo_actividad, descripcion, enlace_foto)
+            VALUES (:arbol_id, :fecha, :tipo_actividad, :descripcion, :enlace_foto)
+        """),
+        {
+            "arbol_id": arbol_id,
+            "fecha": hoy,
+            "tipo_actividad": "Seguimiento Fotográfico",
+            "descripcion": nota_foto,
+            "enlace_foto": drive_url
+        }
+    )
+    db.commit()
+
+    return JSONResponse(content={
+        "status": "success",
+        "mensaje": "Fotografía vinculada correctamente al árbol",
+        "drive_url": drive_url
+    })
 
 @app.get("/casa-malla", response_class=HTMLResponse)
 def ver_casa_malla(request: Request, db: Session = Depends(get_db)):
