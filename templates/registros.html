@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f0f4f1; margin: 0; padding: 16px; }
-    .container { max-width: 1250px; margin: 0 auto; }
+    .container { max-width: 1280px; margin: 0 auto; }
     .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
     h2 { color: #235334; margin: 0; font-size: 1.4rem; }
     .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -20,7 +20,6 @@
     .status-online { background: #e8f5e9; color: #1b5e20; border: 1px solid #a5d6a7; }
     .status-offline { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
     
-    /* Banner de sincronización pendiente */
     .sync-banner {
       background: #e3f2fd; border: 1px solid #90caf9; color: #0d47a1; padding: 12px 16px; border-radius: 10px; margin-bottom: 16px; display: none; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
     }
@@ -33,7 +32,7 @@
       background: white; border-radius: 10px; padding: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
     .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    select, input[type="text"], input[type="number"], input[type="date"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
+    select, input[type="text"], input[type="number"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
     .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn-exp {
       background: #2e7d32; color: white; border: none; padding: 9px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;
@@ -50,11 +49,13 @@
       display: inline-block; padding: 4px 8px; border-radius: 12px; font-size: 0.76rem; font-weight: bold;
     }
     .badge-sano { background: #e8f5e9; color: #1b5e20; }
+    .badge-muerto { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
+    .badge-resiembra { background: #e0f2f1; color: #00695c; border: 1px solid #80cbc4; }
     .link-drive { color: #1565c0; text-decoration: none; font-weight: 600; display: block; margin-bottom: 4px; }
     .link-drive:hover { text-decoration: underline; }
     
     .btn-qr {
-      display: inline-block; background: #e8f5e9; color: #1b5e20; text-decoration: none; font-size: 0.78rem; font-weight: bold; padding: 5px 9px; border-radius: 6px; border: 1px solid #c8e6c9;
+      display: inline-block; background: #e8f5e9; color: #1b5e20; text-decoration: none; font-size: 0.76rem; font-weight: bold; padding: 5px 8px; border-radius: 6px; border: 1px solid #c8e6c9;
     }
     .btn-campo {
       display: inline-block; background: #e1f5fe; color: #0277bd; border: 1px solid #b3e5fc; font-size: 0.8rem; font-weight: bold; padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;
@@ -63,11 +64,13 @@
     .btn-foto {
       display: inline-block; background: #f3e5f5; color: #6a1b9a; border: 1px solid #e1bee7; font-size: 0.76rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
     }
-    .btn-foto:hover { background: #e1bee7; }
     .btn-editar {
-      display: inline-block; background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; font-size: 0.76rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+      display: inline-block; background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; font-size: 0.76rem; font-weight: bold; padding: 5px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
     }
-    .btn-editar:hover { background: #ffe082; }
+    .btn-historial {
+      display: inline-block; background: #eceff1; color: #37474f; border: 1px solid #cfd8dc; font-size: 0.76rem; font-weight: bold; padding: 5px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-historial:hover { background: #cfd8dc; }
     .riego-text { color: #0277bd; font-weight: bold; display: block; }
     .riego-fecha { font-size: 0.75rem; color: #666; display: block; }
     .humedad-tag { font-size: 0.78rem; color: #2e7d32; font-weight: 600; display: block; margin-top: 3px; }
@@ -77,7 +80,7 @@
       position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 14px; overflow-y: auto;
     }
     .modal-box {
-      background: white; border-radius: 12px; max-width: 450px; width: 100%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 92vh; overflow-y: auto;
+      background: white; border-radius: 12px; max-width: 470px; width: 100%; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 92vh; overflow-y: auto;
     }
     .modal-box h3 { margin-top: 0; color: #235334; border-bottom: 1px solid #e8f5e9; padding-bottom: 8px; }
     .section-title { font-size: 0.82rem; font-weight: bold; color: #1b5e20; text-transform: uppercase; margin: 14px 0 8px 0; background: #f1f8e9; padding: 5px 8px; border-radius: 4px; }
@@ -88,6 +91,17 @@
     .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; border-top: 1px solid #eee; padding-top: 12px; }
     .btn-cancel { background: #eee; color: #333; border: none; padding: 9px 14px; border-radius: 6px; font-weight: bold; cursor: pointer; }
     .btn-save { background: #2e7d32; color: white; border: none; padding: 9px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+    /* Estilos Línea de Tiempo Historial */
+    .timeline-item {
+      border-left: 3px solid #2e7d32; padding: 6px 0 10px 12px; margin-bottom: 8px; position: relative; background: #fafdfa; border-radius: 0 6px 6px 0;
+    }
+    .timeline-item.evento-muerto { border-left-color: #c62828; background: #fff8f8; }
+    .timeline-item.evento-resiembra { border-left-color: #00897b; background: #f2fbf9; }
+    .timeline-date { font-size: 0.75rem; color: #666; font-weight: bold; }
+    .timeline-title { font-size: 0.88rem; font-weight: bold; color: #1b5e20; display: block; margin: 2px 0; }
+    .timeline-item.evento-muerto .timeline-title { color: #c62828; }
+    .timeline-desc { font-size: 0.82rem; color: #333; }
   </style>
 </head>
 <body>
@@ -113,13 +127,15 @@
   <div class="actions-panel">
     <div class="filters">
       <label><b>Buscar / Filtrar:</b></label>
-      <input type="text" id="buscadorTexto" onkeyup="filtrarTabla()" placeholder="Ej. Mango, #4, Coco...">
+      <input type="text" id="buscadorTexto" onkeyup="filtrarTabla()" placeholder="Ej. Mango, #4, Muerto...">
       <select id="filtroCondicion" onchange="filtrarTabla()">
         <option value="Todos">Todos los registros</option>
         <option value="Crecimiento">Crecimiento Vegetativo</option>
         <option value="Acolchado">Acolchado</option>
         <option value="Floración">Floración</option>
         <option value="Fructificación">Fructificación</option>
+        <option value="Muerto">💀 Muerto / Pendiente Resiembra</option>
+        <option value="Resiembra">🌱 Resiembra Ejecutada</option>
       </select>
     </div>
 
@@ -136,7 +152,7 @@
           <th>ID</th>
           <th>Variedad</th>
           <th>Sector</th>
-          <th>Fenología</th>
+          <th>Estado / Fenología</th>
           <th>Último Riego / Humedad</th>
           <th>Monitoreo Campo</th>
           <th>Fotografía</th>
@@ -150,7 +166,11 @@
           <td><b>#{{ item.id }}</b></td>
           <td><b>{{ item.especie_variedad }}</b><br><span style="font-size:0.75rem; color:#777;">Siembra: {{ item.fecha_siembra }}</span></td>
           <td>{{ item.lote_sector }}</td>
-          <td id="celda-feno-{{ item.id }}"><span class="badge badge-sano">{{ item.etapa_fenologica }}</span></td>
+          <td id="celda-feno-{{ item.id }}">
+            <span class="badge {% if item.es_muerto %}badge-muerto{% elif 'Resiembra' in item.etapa_fenologica %}badge-resiembra{% else %}badge-sano{% endif %}">
+              {% if item.es_muerto %}💀 {% endif %}{{ item.etapa_fenologica }}
+            </span>
+          </td>
           <td id="celda-estado-{{ item.id }}">
             {% if item.ultimo_riego %}
               <span class="riego-text">💧 {{ item.ultimo_riego.detalle }}</span>
@@ -163,7 +183,7 @@
             {% endif %}
           </td>
           <td>
-            <button class="btn-campo" onclick="abrirModalCampo({{ item.id }}, '{{ item.especie_variedad }}', '{{ item.etapa_fenologica }}')">📋 Monitoreo Campo</button>
+            <button class="btn-campo" onclick="abrirModalCampo({{ item.id }}, '{{ item.especie_variedad }}')">📋 Monitoreo Campo</button>
           </td>
           <td>
             {% if item.imagen_drive_url and item.imagen_drive_url != 'Sin imagen disponible' %}
@@ -173,6 +193,7 @@
           </td>
           <td><code>{{ item.coordenadas if item.coordenadas else 'Sin GPS' }}</code></td>
           <td style="white-space: nowrap;">
+            <button class="btn-historial" data-historial='{{ item.historial_json }}' onclick="abrirModalHistorial({{ item.id }}, '{{ item.especie_variedad }}', this)">📜 Historial</button>
             <button class="btn-editar" onclick="abrirModalEditar({{ item.id }}, '{{ item.especie_variedad }}', '{{ item.lote_sector }}', '{{ item.coordenadas or '' }}', '{{ item.fecha_siembra or '' }}')">✏️ Editar</button>
             <a href="/placa/frutal/{{ item.id }}" target="_blank" class="btn-qr">🔲 QR</a>
           </td>
@@ -185,16 +206,32 @@
   </div>
 </div>
 
-<!-- MODAL 1: Monitoreo Completo de Campo -->
+<!-- MODAL 1: Monitoreo Completo de Campo (Humedad + Riego + Fenología + Muerto/Resiembra) -->
 <div id="modalCampo" class="modal-overlay">
   <div class="modal-box">
     <h3 id="modalTitulo">📋 Monitoreo de Campo</h3>
     <input type="hidden" id="modalArbolId">
-    
-    <div class="section-title">1. Chequeo de Humedad y Varilla (1/4")</div>
+
+    <div class="section-title">1. Estado del Árbol / Fenología / Resiembra</div>
     <div class="form-group">
-      <label>Estado general de humedad del suelo:</label>
+      <label>Actualizar estado o etapa fenológica:</label>
+      <select id="modalFenologia">
+        <option value="">-- Mantener etapa actual --</option>
+        <option value="Crecimiento Vegetativo">🌱 Crecimiento Vegetativo</option>
+        <option value="Acolchado">🍂 Acolchado / Mantenimiento</option>
+        <option value="Brotación">🌿 Brotación activa</option>
+        <option value="Floración">🌸 Floración</option>
+        <option value="Fructificación">🥭 Fructificación</option>
+        <option value="Muerto / Pendiente de Resiembra">💀 Muerto / Pendiente de Resiembra</option>
+        <option value="Resiembra Ejecutada">♻️ Resiembra Ejecutada (Nuevo árbol en punto)</option>
+      </select>
+    </div>
+    
+    <div class="section-title">2. Chequeo de Humedad y Varilla (1/4")</div>
+    <div class="form-group">
+      <label>Estado de humedad del suelo (dejar en "No aplica" si está muerto):</label>
       <select id="modalNivelHumedad">
+        <option value="">-- No aplica / Sin chequeo de humedad --</option>
         <option value="Humedad Óptima (Suelo fresco y reteniendo)">🟢 Humedad Óptima (Suelo fresco)</option>
         <option value="Ligeramente Seco (Monitorear)">🟡 Ligeramente Seco (Monitorear)</option>
         <option value="Seco / Estrés Hídrico (Requiere riego)">🔴 Seco (Requiere riego urgente)</option>
@@ -213,7 +250,7 @@
       </div>
     </div>
 
-    <div class="section-title">2. Riego Aplicado Hoy (Opcional)</div>
+    <div class="section-title">3. Riego Aplicado Hoy (Opcional)</div>
     <div class="row-2">
       <div class="form-group">
         <label>Galones al Tronco:</label>
@@ -225,27 +262,14 @@
       </div>
     </div>
 
-    <div class="section-title">3. Fenología y Observaciones</div>
     <div class="form-group">
-      <label>Etapa fenológica actual:</label>
-      <select id="modalFenologia">
-        <option value="">-- Mantener etapa actual --</option>
-        <option value="Crecimiento Vegetativo">🌱 Crecimiento Vegetativo</option>
-        <option value="Acolchado">🍂 Acolchado / Mantenimiento</option>
-        <option value="Brotación">🌿 Brotación activa</option>
-        <option value="Floración">🌸 Floración</option>
-        <option value="Fructificación">🥭 Fructificación</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>Notas de campo:</label>
-      <textarea id="modalNota" rows="2" placeholder="Ej. Tubo drenó bien; mulch conservando humedad..."></textarea>
+      <label>Observaciones / Causa de pérdida / Detalle de resiembra:</label>
+      <textarea id="modalNota" rows="2" placeholder="Ej. Murió por estrés hídrico antes del primer riego; listo para resiembra..."></textarea>
     </div>
 
     <div class="modal-actions">
       <button class="btn-cancel" onclick="cerrarModalCampo()">Cancelar</button>
-      <button class="btn-save" onclick="guardarMonitoreoCampo()">💾 Guardar Registro</button>
+      <button class="btn-save" onclick="guardarMonitoreoCampo()">💾 Guardar en Bitácora</button>
     </div>
   </div>
 </div>
@@ -310,6 +334,19 @@
   </div>
 </div>
 
+<!-- MODAL 4: Histórico Cronológico del Árbol -->
+<div id="modalHistorial" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modalHistorialTitulo">📜 Historial del Árbol</h3>
+    <div id="contenedorHistorial" style="max-height: 60vh; overflow-y: auto; padding-right: 4px;">
+      <!-- Se llena dinámicamente con JS -->
+    </div>
+    <div class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="cerrarModalHistorial()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
 <script>
   const STORAGE_KEY_PENDIENTES = 'verdio_chequeos_pendientes';
   const STORAGE_KEY_CACHE_HTML = 'verdio_tabla_cache';
@@ -343,14 +380,15 @@
   }
 
   // --- FUNCIONES MODAL CAMPO ---
-  function abrirModalCampo(id, especie, fenoActual) {
+  function abrirModalCampo(id, especie) {
     document.getElementById('modalArbolId').value = id;
     document.getElementById('modalTitulo').innerText = `📋 Árbol #${id} - ${especie}`;
+    document.getElementById('modalFenologia').value = '';
+    document.getElementById('modalNivelHumedad').value = '';
     document.getElementById('modalVarillaPlato').value = '';
     document.getElementById('modalVarillaTubo').value = '';
     document.getElementById('modalGalonesTronco').value = '';
     document.getElementById('modalGalonesTubo').value = '';
-    document.getElementById('modalFenologia').value = '';
     document.getElementById('modalNota').value = '';
     document.getElementById('modalCampo').style.display = 'flex';
   }
@@ -361,29 +399,50 @@
 
   function guardarMonitoreoCampo() {
     const arbolId = parseInt(document.getElementById('modalArbolId').value);
+    const nuevaFeno = document.getElementById('modalFenologia').value;
     const nivel = document.getElementById('modalNivelHumedad').value;
     const varillaPlato = document.getElementById('modalVarillaPlato').value.trim();
     const varillaTubo = document.getElementById('modalVarillaTubo').value.trim();
     const galTronco = parseFloat(document.getElementById('modalGalonesTronco').value) || 0;
     const galTubo = parseFloat(document.getElementById('modalGalonesTubo').value) || 0;
-    const nuevaFeno = document.getElementById('modalFenologia').value;
     const nota = document.getElementById('modalNota').value.trim();
     const hoy = new Date().toISOString().split('T')[0];
 
+    if (!nuevaFeno && !nivel && galTronco === 0 && galTubo === 0 && !nota) {
+      alert("⚠️ Selecciona al menos un estado, chequeo de humedad, riego o nota antes de guardar.");
+      return;
+    }
+
     const pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDIENTES) || '[]');
 
-    let partesHumedad = [nivel];
-    if (varillaPlato) partesHumedad.push(`Varilla plato: ${varillaPlato} cm`);
-    if (varillaTubo) partesHumedad.push(`Varilla tubo: ${varillaTubo} cm`);
-    if (nota) partesHumedad.push(`Nota: ${nota}`);
+    // 1. Si cambió estado fenológico / Muerto / Resiembra
+    if (nuevaFeno) {
+      const descEstado = nota ? `${nuevaFeno} | ${nota}` : `Registro de estado: ${nuevaFeno}`;
+      pendientes.push({
+        arbol_id: arbolId,
+        fecha: hoy,
+        tipo_actividad: nuevaFeno,
+        descripcion: descEstado
+      });
+    }
 
-    pendientes.push({
-      arbol_id: arbolId,
-      fecha: hoy,
-      tipo_actividad: "Chequeo de Humedad",
-      descripcion: partesHumedad.join(" | ")
-    });
+    // 2. Si registró chequeo de humedad
+    if (nivel || varillaPlato || varillaTubo) {
+      let partesHumedad = [];
+      if (nivel) partesHumedad.push(nivel);
+      if (varillaPlato) partesHumedad.push(`Varilla plato: ${varillaPlato} cm`);
+      if (varillaTubo) partesHumedad.push(`Varilla tubo: ${varillaTubo} cm`);
+      if (nota && !nuevaFeno) partesHumedad.push(`Nota: ${nota}`);
 
+      pendientes.push({
+        arbol_id: arbolId,
+        fecha: hoy,
+        tipo_actividad: "Chequeo de Humedad",
+        descripcion: partesHumedad.join(" | ")
+      });
+    }
+
+    // 3. Si aplicó riego hoy
     if (galTronco > 0 || galTubo > 0) {
       const totalGal = galTronco + galTubo;
       const descRiego = `${totalGal} galones (${galTronco} gal tronco + ${galTubo} gal tubo)`;
@@ -395,12 +454,13 @@
       });
     }
 
-    if (nuevaFeno) {
+    // 4. Si solo escribió una nota general sin seleccionar dropdowns
+    if (!nuevaFeno && !nivel && galTronco === 0 && galTubo === 0 && nota) {
       pendientes.push({
         arbol_id: arbolId,
         fecha: hoy,
-        tipo_actividad: nuevaFeno,
-        descripcion: `Actualización fenológica en campo a ${nuevaFeno}`
+        tipo_actividad: "Observación de Campo",
+        descripcion: nota
       });
     }
 
@@ -559,6 +619,38 @@
       btn.disabled = false;
       btn.innerText = "💾 Guardar Cambios";
     }
+  }
+
+  // --- FUNCIONES MODAL HISTORIAL ---
+  function abrirModalHistorial(id, especie, btnElement) {
+    document.getElementById('modalHistorialTitulo').innerText = `📜 Bitácora Histórica - Árbol #${id} (${especie})`;
+    const contenedor = document.getElementById('contenedorHistorial');
+    const historial = JSON.parse(btnElement.getAttribute('data-historial') || '[]');
+
+    if (historial.length === 0) {
+      contenedor.innerHTML = '<p style="color:#777; text-align:center;">No hay eventos históricos registrados para este árbol.</p>';
+    } else {
+      contenedor.innerHTML = historial.map(ev => {
+        let claseExtra = '';
+        if (ev.tipo.toLowerCase().includes('muerto')) claseExtra = 'evento-muerto';
+        else if (ev.tipo.toLowerCase().includes('resiembra')) claseExtra = 'evento-resiembra';
+
+        const linkFoto = ev.foto ? `<br><a href="${ev.foto}" target="_blank" style="color:#1565c0; font-size:0.78rem; font-weight:bold;">📷 Ver fotografía adjunta</a>` : '';
+        return `
+          <div class="timeline-item ${claseExtra}">
+            <span class="timeline-date">📅 ${ev.fecha}</span>
+            <span class="timeline-title">${ev.tipo}</span>
+            <span class="timeline-desc">${ev.descripcion}</span>
+            ${linkFoto}
+          </div>
+        `;
+      }).join('');
+    }
+    document.getElementById('modalHistorial').style.display = 'flex';
+  }
+
+  function cerrarModalHistorial() {
+    document.getElementById('modalHistorial').style.display = 'none';
   }
 
   function filtrarTabla() {
