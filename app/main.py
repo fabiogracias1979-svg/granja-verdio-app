@@ -33,6 +33,12 @@ class RegistroOfflineItem(BaseModel):
 class LoteOffline(BaseModel):
     registros: List[RegistroOfflineItem]
 
+class EdicionFrutal(BaseModel):
+    especie_variedad: str
+    lote_sector: str
+    coordenadas: Optional[str] = ""
+    fecha_siembra: Optional[str] = ""
+
 def normalizar_url_drive(resultado):
     if not resultado:
         return "Sin imagen disponible"
@@ -68,7 +74,7 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
     for row in arboles_sql:
         item = dict(row._mapping)
         
-        # Última foto real registrada en bitacora_frutales (ignora registros sin enlace http)
+        # Última foto real registrada en bitacora_frutales
         ultima_foto = db.execute(
             text("""
                 SELECT enlace_foto FROM bitacora_frutales 
@@ -78,7 +84,7 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
             {"aid": item["id"]}
         ).fetchone()
         
-        # Último evento fenológico (excluyendo riegos, humedad y fotos)
+        # Último evento fenológico
         evento_feno = db.execute(
             text("""
                 SELECT * FROM bitacora_frutales 
@@ -138,6 +144,32 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
         name="registros.html", 
         context={"registros": registros}
     )
+
+@app.put("/api/catalogo-frutales/{arbol_id}")
+def editar_frutal_catalogo(arbol_id: int, datos: EdicionFrutal, db: Session = Depends(get_db)):
+    existe = db.execute(text("SELECT id FROM catalogo_frutales WHERE id = :aid"), {"aid": arbol_id}).fetchone()
+    if not existe:
+        raise HTTPException(status_code=404, detail="Árbol no encontrado en el catálogo")
+
+    db.execute(
+        text("""
+            UPDATE catalogo_frutales
+            SET especie_variedad = :especie,
+                lote_sector = :sector,
+                coordenadas = :coords,
+                fecha_siembra = :fecha
+            WHERE id = :aid
+        """),
+        {
+            "especie": datos.especie_variedad.strip(),
+            "sector": datos.lote_sector.strip(),
+            "coords": (datos.coordenadas or "").strip(),
+            "fecha": (datos.fecha_siembra or "").strip(),
+            "aid": arbol_id
+        }
+    )
+    db.commit()
+    return {"status": "success", "mensaje": f"Árbol #{arbol_id} actualizado correctamente"}
 
 @app.post("/api/sincronizar-offline")
 def sincronizar_offline(lote: LoteOffline, db: Session = Depends(get_db)):
