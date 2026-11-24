@@ -84,7 +84,7 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
             {"aid": item["id"]}
         ).fetchone()
         
-        # Último evento fenológico
+        # Último evento fenológico o de estado del árbol (incluye Muerto / Resiembra)
         evento_feno = db.execute(
             text("""
                 SELECT * FROM bitacora_frutales 
@@ -117,10 +117,33 @@ def ver_registros(request: Request, db: Session = Depends(get_db)):
             """),
             {"aid": item["id"]}
         ).fetchone()
+
+        # Historial completo cronológico para consultar en el modal
+        historial_sql = db.execute(
+            text("""
+                SELECT id, fecha, tipo_actividad, descripcion, enlace_foto 
+                FROM bitacora_frutales 
+                WHERE arbol_id = :aid 
+                ORDER BY fecha DESC, id DESC
+            """),
+            {"aid": item["id"]}
+        ).fetchall()
         
-        item["etapa_fenologica"] = feno_dict.get("tipo_actividad") or "Crecimiento Vegetativo"
-        item["estado_fitosanitario"] = "Óptimo / Sano"
+        historial_lista = []
+        for h in historial_sql:
+            hd = dict(h._mapping)
+            historial_lista.append({
+                "fecha": str(hd.get("fecha") or "")[:10],
+                "tipo": hd.get("tipo_actividad") or "Evento",
+                "descripcion": hd.get("descripcion") or "",
+                "foto": hd.get("enlace_foto") if str(hd.get("enlace_foto") or "").startswith("http") else ""
+            })
+        
+        etapa_actual = feno_dict.get("tipo_actividad") or "Crecimiento Vegetativo"
+        item["etapa_fenologica"] = etapa_actual
+        item["es_muerto"] = "muerto" in etapa_actual.lower()
         item["imagen_drive_url"] = ultima_foto._mapping["enlace_foto"] if ultima_foto else "Sin imagen disponible"
+        item["historial_json"] = json.dumps(historial_lista, ensure_ascii=False)
         
         if ultimo_riego_bitacora:
             r_dict = dict(ultimo_riego_bitacora._mapping)
@@ -188,6 +211,12 @@ def sincronizar_offline(lote: LoteOffline, db: Session = Depends(get_db)):
                 "enlace_foto": "Registro de campo offline"
             }
         )
+        # Si el evento es una Resiembra, actualiza también la fecha_siembra en catalogo_frutales
+        if "resiembra" in item.tipo_actividad.lower() and "muerto" not in item.tipo_actividad.lower():
+            db.execute(
+                text("UPDATE catalogo_frutales SET fecha_siembra = :fecha WHERE id = :aid"),
+                {"fecha": item.fecha, "aid": item.arbol_id}
+            )
         insertados += 1
     db.commit()
     return {"status": "success", "sincronizados": insertados}
