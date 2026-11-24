@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background-color: #f0f4f1; margin: 0; padding: 16px; }
-    .container { max-width: 1200px; margin: 0 auto; }
+    .container { max-width: 1250px; margin: 0 auto; }
     .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 10px; }
     h2 { color: #235334; margin: 0; font-size: 1.4rem; }
     .header-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -33,7 +33,7 @@
       background: white; border-radius: 10px; padding: 16px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);
     }
     .filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-    select, input[type="text"], input[type="number"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
+    select, input[type="text"], input[type="number"], input[type="date"], textarea { padding: 9px 12px; border: 1px solid #ccd5ce; border-radius: 6px; outline: none; font-size: 0.92rem; }
     .export-btns { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn-exp {
       background: #2e7d32; color: white; border: none; padding: 9px 14px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 0.85rem; display: inline-flex; align-items: center; gap: 6px;
@@ -64,6 +64,10 @@
       display: inline-block; background: #f3e5f5; color: #6a1b9a; border: 1px solid #e1bee7; font-size: 0.76rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
     }
     .btn-foto:hover { background: #e1bee7; }
+    .btn-editar {
+      display: inline-block; background: #fff8e1; color: #f57f17; border: 1px solid #ffe082; font-size: 0.76rem; font-weight: bold; padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-editar:hover { background: #ffe082; }
     .riego-text { color: #0277bd; font-weight: bold; display: block; }
     .riego-fecha { font-size: 0.75rem; color: #666; display: block; }
     .humedad-tag { font-size: 0.78rem; color: #2e7d32; font-weight: 600; display: block; margin-top: 3px; }
@@ -137,7 +141,7 @@
           <th>Monitoreo Campo</th>
           <th>Fotografía</th>
           <th>Coordenadas</th>
-          <th>Placa QR</th>
+          <th>Acciones</th>
         </tr>
       </thead>
       <tbody id="tablaCuerpo">
@@ -168,7 +172,8 @@
             <button class="btn-foto" onclick="abrirModalFoto({{ item.id }}, '{{ item.especie_variedad }}')">📸 Subir Foto</button>
           </td>
           <td><code>{{ item.coordenadas if item.coordenadas else 'Sin GPS' }}</code></td>
-          <td>
+          <td style="white-space: nowrap;">
+            <button class="btn-editar" onclick="abrirModalEditar({{ item.id }}, '{{ item.especie_variedad }}', '{{ item.lote_sector }}', '{{ item.coordenadas or '' }}', '{{ item.fecha_siembra or '' }}')">✏️ Editar</button>
             <a href="/placa/frutal/{{ item.id }}" target="_blank" class="btn-qr">🔲 QR</a>
           </td>
         </tr>
@@ -180,7 +185,7 @@
   </div>
 </div>
 
-<!-- MODAL 1: Monitoreo Completo de Campo (Humedad + Varilla + Riego Galones + Fenología) -->
+<!-- MODAL 1: Monitoreo Completo de Campo -->
 <div id="modalCampo" class="modal-overlay">
   <div class="modal-box">
     <h3 id="modalTitulo">📋 Monitoreo de Campo</h3>
@@ -270,6 +275,41 @@
   </div>
 </div>
 
+<!-- MODAL 3: Editar Datos Fijos del Árbol -->
+<div id="modalEditar" class="modal-overlay">
+  <div class="modal-box">
+    <h3 id="modalEditarTitulo">✏️ Editar Datos del Árbol</h3>
+    <form id="formEditarArbol" onsubmit="guardarEdicionArbol(event)">
+      <input type="hidden" id="editArbolId">
+      
+      <div class="form-group">
+        <label>Especie / Variedad:</label>
+        <input type="text" id="editEspecie" required placeholder="Ej. Aguacate Hass">
+      </div>
+
+      <div class="form-group">
+        <label>Lote / Sector:</label>
+        <input type="text" id="editSector" required placeholder="Ej. Parcela General">
+      </div>
+
+      <div class="form-group">
+        <label>Coordenadas GPS (Latitud, Longitud):</label>
+        <input type="text" id="editCoordenadas" placeholder="Ej. 14.015632, -89.247076">
+      </div>
+
+      <div class="form-group">
+        <label>Fecha de Siembra (AAAA-MM-DD):</label>
+        <input type="text" id="editFechaSiembra" placeholder="Ej. 2026-08-30">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="cerrarModalEditar()">Cancelar</button>
+        <button type="submit" id="btnGuardarEdicion" class="btn-save">💾 Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   const STORAGE_KEY_PENDIENTES = 'verdio_chequeos_pendientes';
   const STORAGE_KEY_CACHE_HTML = 'verdio_tabla_cache';
@@ -302,7 +342,7 @@
     }
   }
 
-  // --- FUNCIONES MODAL CAMPO (OFFLINE / ONLINE) ---
+  // --- FUNCIONES MODAL CAMPO ---
   function abrirModalCampo(id, especie, fenoActual) {
     document.getElementById('modalArbolId').value = id;
     document.getElementById('modalTitulo').innerText = `📋 Árbol #${id} - ${especie}`;
@@ -332,7 +372,6 @@
 
     const pendientes = JSON.parse(localStorage.getItem(STORAGE_KEY_PENDIENTES) || '[]');
 
-    // 1. Registro de Chequeo de Humedad + Varilla
     let partesHumedad = [nivel];
     if (varillaPlato) partesHumedad.push(`Varilla plato: ${varillaPlato} cm`);
     if (varillaTubo) partesHumedad.push(`Varilla tubo: ${varillaTubo} cm`);
@@ -345,7 +384,6 @@
       descripcion: partesHumedad.join(" | ")
     });
 
-    // 2. Si aplicó riego hoy, guardar también el registro de Riego en galones
     if (galTronco > 0 || galTubo > 0) {
       const totalGal = galTronco + galTubo;
       const descRiego = `${totalGal} galones (${galTronco} gal tronco + ${galTubo} gal tubo)`;
@@ -357,7 +395,6 @@
       });
     }
 
-    // 3. Si cambió la etapa fenológica, guardar actualización fenológica
     if (nuevaFeno) {
       pendientes.push({
         arbol_id: arbolId,
@@ -467,6 +504,60 @@
     } finally {
       btn.disabled = false;
       btn.innerText = "☁️ Subir a Drive";
+    }
+  }
+
+  // --- FUNCIONES MODAL EDITAR ---
+  function abrirModalEditar(id, especie, sector, coordenadas, fechaSiembra) {
+    if (!navigator.onLine) {
+      alert("⚠️ Necesitas conexión a internet para editar los datos fijos del catálogo.");
+      return;
+    }
+    document.getElementById('editArbolId').value = id;
+    document.getElementById('modalEditarTitulo').innerText = `✏️ Editar Árbol #${id}`;
+    document.getElementById('editEspecie').value = especie;
+    document.getElementById('editSector').value = sector;
+    document.getElementById('editCoordenadas').value = coordenadas;
+    document.getElementById('editFechaSiembra').value = fechaSiembra;
+    document.getElementById('modalEditar').style.display = 'flex';
+  }
+
+  function cerrarModalEditar() {
+    document.getElementById('modalEditar').style.display = 'none';
+  }
+
+  async function guardarEdicionArbol(e) {
+    e.preventDefault();
+    const id = document.getElementById('editArbolId').value;
+    const btn = document.getElementById('btnGuardarEdicion');
+    btn.disabled = true;
+    btn.innerText = "⏳ Guardando...";
+
+    const payload = {
+      especie_variedad: document.getElementById('editEspecie').value,
+      lote_sector: document.getElementById('editSector').value,
+      coordenadas: document.getElementById('editCoordenadas').value,
+      fecha_siembra: document.getElementById('editFechaSiembra').value
+    };
+
+    try {
+      const resp = await fetch(`/api/catalogo-frutales/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await resp.json();
+      if (resp.ok) {
+        alert(`✅ ${data.mensaje}`);
+        window.location.reload();
+      } else {
+        alert("❌ Error: " + (data.detail || "No se pudieron guardar los cambios"));
+      }
+    } catch (err) {
+      alert("❌ Error de conexión al intentar actualizar el árbol.");
+    } finally {
+      btn.disabled = false;
+      btn.innerText = "💾 Guardar Cambios";
     }
   }
 
